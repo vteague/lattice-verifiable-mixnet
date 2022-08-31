@@ -6,7 +6,7 @@ Depedencies are the [NFLLib](https://github.com/quarkslab/NFLlib) and [FLINT](ht
 NFLLib is already included in this repository, but instructions for installing its dependencies can be found in the link above.
 FLINT is usually included in package managers and can be easily installed in most systems out there.
 
-### Dependencies
+### Building dependencies
 
 To build NFLLib, run the following inside a cloned version of this repository:
 
@@ -17,7 +17,7 @@ $ cmake .. -DCMAKE_BUILD_TYPE=Release -DNFL_OPTIMIZED=ON
 $ make
 $ make test
 ```
-### Building and running
+### Building and running the code
 
 For building the actual code, run `make` inside the source directory. This will build the binaries for `commit`, `encrypt`, `pianex` and `piaex` and `shuffle` to test and benchmark different modules of the code.
 
