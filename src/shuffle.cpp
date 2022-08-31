@@ -15,7 +15,7 @@
 /* Private definitions                                                        */
 /*============================================================================*/
 
-#define MSGS        2
+#define MSGS        1000
 
 void shuffle_hash(params::poly_q& beta, commitkey_t& key, commit_t x,
 		commit_t y,	params::poly_q alpha[2], params::poly_q& u,
