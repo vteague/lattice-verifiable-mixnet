@@ -37,7 +37,7 @@ using namespace std;
 /* Sigma for the commitment gaussian distribution. */
 #define SIGMA_ANEX  (11585u)
 /* Parties that run the distributed decryption protocol. */
-#define PARTIES     2
+#define PARTIES     4
 /* Security level for Distributed Decryption. */
 #define BGVSEC      40
 /* Bound for Distributed Decryption = 2^BGVSEC * q/(2 * p * PARTIES). */
