@@ -613,9 +613,9 @@ static void test(flint_rand_t rand) {
 	} TEST_END;
 
 	printf("\n** Benchmarks for lattice-based AEX proof:\n\n");
-    BENCH_ONCE("piaex_setup", piaex_setup(lag, a, q, rand, ctx));
-    BENCH_ONCE("piaex_prover", piaex_prover(com, x, f, rf, h, rh, rd, key, lag, rand, ctx));
-    BENCH_ONCE("piaex_verifier", piaex_verifier(com, f, rf, rd, key, lag, rand, ctx));
+    BENCH_SMALL("piaex_setup", piaex_setup(lag, a, q, rand, ctx));
+    BENCH_SMALL("piaex_prover", piaex_prover(com, x, f, rf, h, rh, rd, key, lag, rand, ctx));
+    BENCH_SMALL("piaex_verifier", piaex_verifier(com, f, rf, rd, key, lag, rand, ctx));
 
 end:
     for (int i = 0; i < V; i++) {
