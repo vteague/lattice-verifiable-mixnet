@@ -463,9 +463,7 @@ static void bench() {
         }
 	}
 
-	BENCH_BEGIN("shuffle-proof (N messages)") {
-		BENCH_ADD(run(com, m, _m, key, _key, r));
-	} BENCH_END;
+	BENCH_SMALL("shuffle-proof (N messages)", run(com, m, _m, key, _key, r));
 }
 
 int main(int argc, char *argv[]) {

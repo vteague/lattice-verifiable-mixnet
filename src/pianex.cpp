@@ -282,13 +282,8 @@ static void bench() {
         }
     }
 
-	BENCH_BEGIN("ANEX prover (N relations)") {
-		BENCH_ADD(pianex_prover(h1, Z, A, t, s));
-	} BENCH_END;
-
-    BENCH_BEGIN("ANEX verifier (N relations)") {
-		BENCH_ADD(pianex_verifier(h1, Z, A, t));
-	} BENCH_END;
+	BENCH_SMALL("ANEX prover (N relations)", pianex_prover(h1, Z, A, t, s));
+	BENCH_SMALL("ANEX verifier (N relations)", pianex_verifier(h1, Z, A, t));
 }
 
 int main(int argc, char *argv[]) {
