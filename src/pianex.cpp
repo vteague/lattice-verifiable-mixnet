@@ -6,7 +6,7 @@
 
 #define R       (HEIGHT+1)
 #define V       (HEIGHT+3)
-#define TAU     100
+#define TAU     1000
 #define NTI     130
 
 static void pianex_hash(uint8_t h[SHA256HashSize], params::poly_q A[R][V], params::poly_q t[TAU][V], params::poly_q W[R][NTI]) {
