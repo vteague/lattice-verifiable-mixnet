@@ -292,4 +292,5 @@ int main(int argc, char *argv[]) {
 
 	printf("\n** Benchmarks for lattice-based ANEX proof:\n\n");
 	bench();
+	printf("\nMultiply prover by 3 due to rejection sampling.");
 }

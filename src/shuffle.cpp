@@ -475,5 +475,6 @@ int main(int argc, char *argv[]) {
 
 	printf("\n** Benchmarks for lattice-based shuffle proof:\n\n");
 	bench();
+	printf("\nMultiply prover by 3 due to rejection sampling.");
 }
 #endif
