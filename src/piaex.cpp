@@ -24,24 +24,13 @@ static void piaex_hash(fmpz_t x, fmpz_t beta0, fmpz_t beta[TAU][3], fmpz_t q, co
     uint8_t h[SHA256HashSize];
     flint_rand_t rand;
     ulong seed[2];
-    std::array<mpz_t, params::poly_q::degree> coeffs;
 
     flint_randinit(rand);
-    for (size_t i = 0; i < params::poly_q::degree; i++) {
-        mpz_init2(coeffs[i], (params::poly_q::bits_in_moduli_product() << 2));
-    }
 
 	SHA256Reset(&sha);
-    com.c1.poly2mpz(coeffs);
-    for (size_t k = 0; k < params::poly_q::degree; k++) {
-        SHA256Input(&sha, (uint8_t *)coeffs[k]->_mp_d, coeffs[k]->_mp_size * sizeof(uint64_t));
-    }
-	/* Hash public key. */
+    SHA256Input(&sha, (const uint8_t *)com.c1.data(), 16 * DEGREE);
 	for (size_t i = 0; i < com.c2.size(); i++) {
-        com.c2[i].poly2mpz(coeffs);
-        for (size_t k = 0; k < params::poly_q::degree; k++) {
-            SHA256Input(&sha, (uint8_t *)coeffs[k]->_mp_d, coeffs[k]->_mp_size * sizeof(uint64_t));
-        }
+        SHA256Input(&sha, (const uint8_t *)com.c2[i].data(), 16 * DEGREE);
 	}
 
 	SHA256Result(&sha, h);
@@ -55,10 +44,6 @@ static void piaex_hash(fmpz_t x, fmpz_t beta0, fmpz_t beta[TAU][3], fmpz_t q, co
         for (size_t j = 0; j < 3; j++) {
             fmpz_randm(beta[i][j], rand, q);
         }
-    }
-
-    for (size_t i = 0; i < params::poly_q::degree; i++) {
-        mpz_clear(coeffs[i]);
     }
 }
 
