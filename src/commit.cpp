@@ -145,11 +145,10 @@ int commit_open(commit_t& com, vector<params::poly_q> m, commitkey_t& key, vecto
         }
 
         // Compute sigma^2 = (0.954 * v * beta * sqrt(k * N))^2.
-    	uint64_t sigma_sqr = SIGMA_C;
         for (size_t i = 0; i < r.size(); i++) {
             c1 = r[i];
             c1.invntt_pow_invphi();
-            if (!commit_test_norm(c1, 16 * sigma_sqr)) {
+            if (!commit_test_norm(c1, 16 * SIGMA_C)) {
                 cout << "ERROR: Commit opening failed norm test" << endl;
                 result = false;
                 break;

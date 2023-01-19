@@ -27,15 +27,15 @@ using namespace std;
 #define SIZE        2
 #endif
 /* Large modulus. */
-#define PRIMEQ      "302231454903657293676551"
+#define PRIMEQ      "302231454903657293688833"
 /* Small modulus. */
 #define PRIMEP      3
 /* Degree of the irreducible polynomial. */
 #define DEGREE      4096
 /* Sigma for the commitment gaussian distribution. */
 #define SIGMA_C     (1u << 12)
-/* Sigma for the commitment gaussian distribution. */
-#define SIGMA_ANEX  (11585u)
+/* Sigma for the approximate amortized proof. */
+#define SIGMA_ANEX  (1e66l)
 /* Parties that run the distributed decryption protocol. */
 #define PARTIES     4
 /* Security level for Distributed Decryption. */

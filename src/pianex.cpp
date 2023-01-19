@@ -11,45 +11,26 @@
 
 static void pianex_hash(uint8_t h[SHA256HashSize], params::poly_q A[R][V], params::poly_q t[TAU][V], params::poly_q W[R][NTI]) {
 	SHA256Context sha;
-    std::array<mpz_t, params::poly_q::degree> coeffs;
-	params::poly_q tmp;
-
-    for (size_t i = 0; i < params::poly_q::degree; i++) {
-        mpz_init2(coeffs[i], (params::poly_q::bits_in_moduli_product() << 2));
-    }
 
 	SHA256Reset(&sha);
 	/* Hash public key. */
 	for (size_t i = 0; i < R; i++) {
 		for (int j = 0; j < V; j++) {
-            A[i][j].poly2mpz(coeffs);
-            for (size_t k = 0; k < params::poly_q::degree; k++) {
-                SHA256Input(&sha, (uint8_t *)coeffs[k]->_mp_d, coeffs[k]->_mp_size * sizeof(uint64_t));
-            }
+			SHA256Input(&sha, (const uint8_t *)A[i][j].data(), 16 * DEGREE);
 		}
 	}
     for (size_t i = 0; i < TAU; i++) {
 		for (int j = 0; j < V; j++) {
-            t[i][j].poly2mpz(coeffs);
-            for (size_t k = 0; k < params::poly_q::degree; k++) {
-                SHA256Input(&sha, (uint8_t *)coeffs[k]->_mp_d, coeffs[k]->_mp_size * sizeof(uint64_t));
-            }
+			SHA256Input(&sha, (const uint8_t *)t[i][j].data(), 16 * DEGREE);
 		}
 	}
     for (size_t i = 0; i < R; i++) {
 		for (int j = 0; j < NTI; j++) {
-            W[i][j].poly2mpz(coeffs);
-            for (size_t k = 0; k < params::poly_q::degree; k++) {
-                SHA256Input(&sha, (uint8_t *)coeffs[k]->_mp_d, coeffs[k]->_mp_size * sizeof(uint64_t));
-            }
+			SHA256Input(&sha, (const uint8_t *)W[i][j].data(), 16 * DEGREE);
 		}
 	}
 
 	SHA256Result(&sha, h);
-
-    for (size_t i = 0; i < params::poly_q::degree; i++) {
-        mpz_clear(coeffs[i]);
-    }
 }
 
 /**

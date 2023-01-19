@@ -34,6 +34,7 @@ void encrypt_sample_message(params::poly_p& r) {
 
 void encrypt_sample_short(params::poly_q& r) {
     r = nfl::ZO_dist();
+    r.ntt_pow_phi();
 }
 
 // Generate a key pair.
@@ -42,7 +43,6 @@ void encrypt_keygen(bgvkey_t& pk, params::poly_q& sk) {
     pk.a = nfl::uniform();
 
     encrypt_sample_short(sk);
-    sk.ntt_pow_phi();
     e.ntt_pow_phi();
 
     pk.b = pk.a * sk + (e + e + e);
@@ -67,7 +67,6 @@ void encrypt_doit(cipher_t &c, bgvkey_t& pk, params::poly_p& m) {
     e1.ntt_pow_phi();
     e2.ntt_pow_phi();
     encrypt_sample_short(r);
-    r.ntt_pow_phi();
 
     c.u = pk.a * r + (e1 + e1 + e1);
     c.v = pk.b * r + (e2 + e2 + e2);
