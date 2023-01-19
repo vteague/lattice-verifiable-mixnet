@@ -28,7 +28,8 @@ void lin_hash(params::poly_q & beta, commitkey_t & key, commit_t x,
 	/* Hash public key. */
 	for (size_t i = 0; i < HEIGHT; i++) {
 		for (int j = 0; j < WIDTH - HEIGHT; j++) {
-			SHA256Input(&sha, (const uint8_t *)key.A1[i][j].data(), 16 * DEGREE);
+			SHA256Input(&sha, (const uint8_t *)key.A1[i][j].data(),
+					16 * DEGREE);
 		}
 	}
 	for (size_t j = 0; j < WIDTH; j++) {
@@ -121,7 +122,8 @@ static void simul_inverse(params::poly_q inv[MSGS], params::poly_q m[MSGS]) {
 static void lin_prover(params::poly_q y[WIDTH], params::poly_q _y[WIDTH],
 		params::poly_q & t, params::poly_q & _t, params::poly_q & u,
 		commit_t x, commit_t _x, params::poly_q alpha[2],
-		commitkey_t & key, vector<params::poly_q> r, vector<params::poly_q> _r) {
+		commitkey_t & key, vector < params::poly_q > r,
+		vector < params::poly_q > _r) {
 	params::poly_q beta;
 	std::array < mpz_t, params::poly_q::degree > coeffs;
 	mpz_t qDivBy2;
@@ -179,7 +181,7 @@ static void lin_prover(params::poly_q y[WIDTH], params::poly_q _y[WIDTH],
 
 static int lin_verifier(params::poly_q z[WIDTH], params::poly_q _z[WIDTH],
 		params::poly_q t, params::poly_q _t, params::poly_q u,
-		commit_t x, commit_t _x, params::poly_q alpha[2], commitkey_t &key) {
+		commit_t x, commit_t _x, params::poly_q alpha[2], commitkey_t & key) {
 	params::poly_q beta, v, _v, tmp, zero = 0;
 	int result = 1;
 
@@ -226,7 +228,7 @@ static int lin_verifier(params::poly_q z[WIDTH], params::poly_q _z[WIDTH],
 	return result;
 }
 
-void shuffle_hash(params::poly_q &beta, commit_t c[MSGS], commit_t d[MSGS],
+void shuffle_hash(params::poly_q & beta, commit_t c[MSGS], commit_t d[MSGS],
 		params::poly_q _ms[MSGS], params::poly_q rho[SIZE]) {
 	SHA256Context sha;
 	uint8_t hash[SHA256HashSize];
@@ -254,14 +256,14 @@ void shuffle_hash(params::poly_q &beta, commit_t c[MSGS], commit_t d[MSGS],
 	nfl::fastrandombytes_reseed();
 }
 
-static void shuffle_prover(params::poly_q y[MSGS][WIDTH], params::poly_q _y[MSGS][WIDTH],
-		params::poly_q t[MSGS], params::poly_q _t[MSGS], params::poly_q u[MSGS],
-		commit_t d[MSGS], params::poly_q s[MSGS], commit_t c[MSGS],
-		params::poly_q ms[MSGS], params::poly_q _ms[MSGS],
-		vector <params::poly_q> r[MSGS], params::poly_q rho[MSGS],
-		commitkey_t &key) {
-	vector<params::poly_q> t0(1);
-	vector<params::poly_q> _r[MSGS];
+static void shuffle_prover(params::poly_q y[MSGS][WIDTH],
+		params::poly_q _y[MSGS][WIDTH], params::poly_q t[MSGS],
+		params::poly_q _t[MSGS], params::poly_q u[MSGS], commit_t d[MSGS],
+		params::poly_q s[MSGS], commit_t c[MSGS], params::poly_q ms[MSGS],
+		params::poly_q _ms[MSGS], vector < params::poly_q > r[MSGS],
+		params::poly_q rho[MSGS], commitkey_t & key) {
+	vector < params::poly_q > t0(1);
+	vector < params::poly_q > _r[MSGS];
 	params::poly_q alpha[2], beta, theta[MSGS], inv[MSGS];
 
 	/* Prover samples theta_i and computes commitments D_i. */
@@ -316,16 +318,18 @@ static void shuffle_prover(params::poly_q y[MSGS][WIDTH], params::poly_q _y[MSGS
 			alpha[0] = s[l - 1];
 		}
 		alpha[1] = t0[0];
-		lin_prover(y[l], _y[l], t[l], _t[l], u[l], c[l], d[l], alpha, key, r[l], _r[l]);
+		lin_prover(y[l], _y[l], t[l], _t[l], u[l], c[l], d[l], alpha, key, r[l],
+				_r[l]);
 	}
 }
 
-static int shuffle_verifier(params::poly_q y[MSGS][WIDTH], params::poly_q _y[MSGS][WIDTH],
-			params::poly_q t[MSGS], params::poly_q _t[MSGS], params::poly_q u[MSGS],
-		commit_t d[MSGS], params::poly_q s[MSGS], commit_t c[MSGS],
-		params::poly_q _ms[MSGS], params::poly_q rho[SIZE], commitkey_t &key) {
+static int shuffle_verifier(params::poly_q y[MSGS][WIDTH],
+		params::poly_q _y[MSGS][WIDTH], params::poly_q t[MSGS],
+		params::poly_q _t[MSGS], params::poly_q u[MSGS], commit_t d[MSGS],
+		params::poly_q s[MSGS], commit_t c[MSGS], params::poly_q _ms[MSGS],
+		params::poly_q rho[SIZE], commitkey_t & key) {
 	params::poly_q alpha[2], beta;
-	vector<params::poly_q> t0(1);
+	vector < params::poly_q > t0(1);
 	int result = 1;
 
 	shuffle_hash(beta, c, d, _ms, rho);
@@ -347,18 +351,20 @@ static int shuffle_verifier(params::poly_q y[MSGS][WIDTH], params::poly_q _y[MSG
 			alpha[0] = s[l - 1];
 		}
 		alpha[1] = t0[0];
-		result &= lin_verifier(y[l], _y[l], t[l], _t[l], u[l], c[l], d[l], alpha, key);
+		result &=
+				lin_verifier(y[l], _y[l], t[l], _t[l], u[l], c[l], d[l], alpha,
+				key);
 	}
 
 	return result;
 }
 
-static int run(commit_t com[MSGS], vector<vector<params::poly_q>> m,
-		vector<vector<params::poly_q>> _m, commitkey_t &key,
-		vector <params::poly_q> r[MSGS]) {
+static int run(commit_t com[MSGS], vector < vector < params::poly_q >> m,
+		vector < vector < params::poly_q >> _m, commitkey_t & key,
+		vector < params::poly_q > r[MSGS]) {
 	params::poly_q ms[MSGS], _ms[MSGS];
 	commit_t d[MSGS], cs[MSGS];
-	vector<params::poly_q> t0(1);
+	vector < params::poly_q > t0(1);
 	params::poly_q one, t1, rho[SIZE], s[MSGS];
 	params::poly_q y[MSGS][WIDTH], _y[MSGS][WIDTH], t[MSGS], _t[MSGS], u[MSGS];
 	commitkey_t _key;
@@ -413,8 +419,8 @@ static int run(commit_t com[MSGS], vector<vector<params::poly_q>> m,
 static void test() {
 	commitkey_t key;
 	commit_t com[MSGS];
-	vector<vector<params::poly_q>> m(MSGS), _m(MSGS);
-	vector<params::poly_q> r[MSGS];
+	vector < vector < params::poly_q >> m(MSGS), _m(MSGS);
+	vector < params::poly_q > r[MSGS];
 
 	/* Generate commitment key-> */
 	commit_keygen(key);
@@ -480,8 +486,8 @@ static void microbench() {
 static void bench() {
 	commitkey_t key;
 	commit_t com[MSGS];
-	vector<vector<params::poly_q>> m(MSGS), _m(MSGS);
-	vector<params::poly_q> r[MSGS];
+	vector < vector < params::poly_q >> m(MSGS), _m(MSGS);
+	vector < params::poly_q > r[MSGS];
 	params::poly_q y[WIDTH], _y[WIDTH], t, _t, u, alpha[2], beta;
 
 	/* Generate commitment key-> */
@@ -511,7 +517,8 @@ static void bench() {
 	BENCH_SMALL("shuffle-proof (N messages)", run(com, m, _m, key, r));
 
 	BENCH_BEGIN("linear proof") {
-		BENCH_ADD(lin_prover(y, _y, t, _t, u, com[0], com[1], alpha, key, r[0], r[0]));
+		BENCH_ADD(lin_prover(y, _y, t, _t, u, com[0], com[1], alpha, key, r[0],
+						r[0]));
 	} BENCH_END;
 
 	BENCH_BEGIN("linear verifier") {
