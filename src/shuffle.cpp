@@ -9,7 +9,6 @@
 #include "test.h"
 #include "bench.h"
 #include "assert.h"
-#include "sha.h"
 #include "gaussian.h"
 
 /*============================================================================*/
