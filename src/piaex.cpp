@@ -168,7 +168,7 @@ static void piaex_setup(fmpz_mod_poly_t lag[], fmpz_t a[TAU], fmpz_t & q,
 
 static int piaex_prover(commit_t & com, fmpz_t x, fmpz_mod_poly_t f[V],
 		fmpz_t rf[ETA], fmpz_mod_poly_t h[2][V], fmpz_t rh[ETA],
-		vector < params::poly_q > rd, commitkey_t & key,
+		vector < params::poly_q > rd, comkey_t & key,
 		fmpz_mod_poly_t lag[TAU + 1], flint_rand_t prng,
 		const fmpz_mod_ctx_t ctx) {
 	array < mpz_t, params::poly_q::degree > coeffs, coeffs0, v[3][TAU][V];
@@ -236,7 +236,7 @@ static int piaex_prover(commit_t & com, fmpz_t x, fmpz_mod_poly_t f[V],
 		}
 		d[j].invntt_pow_invphi();
 	}
-	commit_doit(com, d, key, rd);
+	bdlop_commit(com, d, key, rd);
 
 	/* Compute f \circ (f + 1) \circ (f - 1) explicitly by computing the v_i,j. */
 	for (size_t k = 0; k < V; k++) {
@@ -430,7 +430,7 @@ static int piaex_prover(commit_t & com, fmpz_t x, fmpz_mod_poly_t f[V],
 }
 
 static int piaex_verifier(commit_t & com, fmpz_mod_poly_t f[V], fmpz_t rf[ETA],
-		vector < params::poly_q > rd, commitkey_t & key,
+		vector < params::poly_q > rd, comkey_t & key,
 		fmpz_mod_poly_t lag[TAU + 1], flint_rand_t prng,
 		const fmpz_mod_ctx_t ctx) {
 	array < mpz_t, params::poly_q::degree > coeffs;
@@ -495,7 +495,7 @@ static int piaex_verifier(commit_t & com, fmpz_mod_poly_t f[V], fmpz_t rf[ETA],
 	}
 	one = 1;
 	one.ntt_pow_phi();
-	int result = commit_open(com, m, key, rd, one);
+	int result = bdlop_open(com, m, key, rd, one);
 
 	fmpz_clear(q);
 	fmpz_clear(x);
@@ -521,7 +521,7 @@ static void test(flint_rand_t rand) {
 	fmpz_t q, x, a[TAU], rf[ETA], rh[ETA];
 	fmpz_mod_poly_t poly;
 	fmpz_mod_ctx_t ctx, ctx_q;
-	commitkey_t key;
+	comkey_t key;
 	commit_t com;
 	vector < params::poly_q > rd;
 	fmpz_mod_poly_t f[V], lag[TAU + 1], h[2][V];
@@ -599,8 +599,8 @@ static void test(flint_rand_t rand) {
 
 	piaex_setup(lag, a, q, rand, ctx);
 
-	commit_keygen(key);
-	commit_sample(rd);
+	bdlop_keygen(key);
+	bdlop_sample_rand(rd);
 
 	TEST_ONCE("AEX proof is consistent") {
 		piaex_prover(com, x, f, rf, h, rh, rd, key, lag, rand, ctx);

@@ -111,7 +111,7 @@ static void pianex_prover(uint8_t h[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 	pianex_hash(h, A, t, W);
 
 	/* Sample challenge from RNG seeded with hash. */
-	nfl::fastrandombytes_seed(h, BLAKE3_OUT_LEN);
+	nfl::fastrandombytes_seed(h);
 
 	/* Verifier samples challenge matrix C. */
 	for (int i = 0; i < TAU; i++) {
@@ -146,7 +146,7 @@ int pianex_verifier(uint8_t h1[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 	int result;
 
 	/* Sample challenge from RNG seeded with hash. */
-	nfl::fastrandombytes_seed(h1, BLAKE3_OUT_LEN);
+	nfl::fastrandombytes_seed(h1);
 
 	/* Verifier samples challenge matrix C. */
 	for (int i = 0; i < TAU; i++) {

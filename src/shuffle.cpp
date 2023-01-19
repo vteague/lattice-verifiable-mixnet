@@ -17,7 +17,7 @@
 
 #define MSGS        25
 
-static void lin_hash(params::poly_q & beta, commitkey_t & key, commit_t x,
+static void lin_hash(params::poly_q & beta, comkey_t & key, commit_t x,
 		commit_t y, params::poly_q alpha[2], params::poly_q & u,
 		params::poly_q t, params::poly_q _t) {
 	uint8_t hash[BLAKE3_OUT_LEN];
@@ -55,8 +55,8 @@ static void lin_hash(params::poly_q & beta, commitkey_t & key, commit_t x,
 	blake3_hasher_finalize(&hasher, hash, BLAKE3_OUT_LEN);
 
 	/* Sample challenge from RNG seeded with hash. */
-	nfl::fastrandombytes_seed(hash, BLAKE3_OUT_LEN);
-	commit_sample_chall(beta);
+	nfl::fastrandombytes_seed(hash);
+	bdlop_sample_chal(beta);
 	nfl::fastrandombytes_reseed();
 }
 
@@ -122,7 +122,7 @@ static void simul_inverse(params::poly_q inv[MSGS], params::poly_q m[MSGS]) {
 static void lin_prover(params::poly_q y[WIDTH], params::poly_q _y[WIDTH],
 		params::poly_q & t, params::poly_q & _t, params::poly_q & u,
 		commit_t x, commit_t _x, params::poly_q alpha[2],
-		commitkey_t & key, vector < params::poly_q > r,
+		comkey_t & key, vector < params::poly_q > r,
 		vector < params::poly_q > _r) {
 	params::poly_q beta;
 	std::array < mpz_t, params::poly_q::degree > coeffs;
@@ -181,7 +181,7 @@ static void lin_prover(params::poly_q y[WIDTH], params::poly_q _y[WIDTH],
 
 static int lin_verifier(params::poly_q z[WIDTH], params::poly_q _z[WIDTH],
 		params::poly_q t, params::poly_q _t, params::poly_q u,
-		commit_t x, commit_t _x, params::poly_q alpha[2], commitkey_t & key) {
+		commit_t x, commit_t _x, params::poly_q alpha[2], comkey_t & key) {
 	params::poly_q beta, v, _v, tmp, zero = 0;
 	int result = 1;
 
@@ -192,10 +192,10 @@ static int lin_verifier(params::poly_q z[WIDTH], params::poly_q _z[WIDTH],
 	for (int i = 0; i < WIDTH; i++) {
 		v = z[i];
 		v.invntt_pow_invphi();
-		result &= commit_test_norm(v, 4 * SIGMA_C * SIGMA_C);
+		result &= bdlop_test_norm(v, 4 * SIGMA_C * SIGMA_C);
 		v = _z[i];
 		v.invntt_pow_invphi();
-		result &= commit_test_norm(v, 4 * SIGMA_C * SIGMA_C);
+		result &= bdlop_test_norm(v, 4 * SIGMA_C * SIGMA_C);
 	}
 
 	/* Verifier computes A1z and A1z'. */
@@ -252,7 +252,7 @@ void shuffle_hash(params::poly_q & beta, commit_t c[MSGS], commit_t d[MSGS],
 	blake3_hasher_finalize(&hasher, hash, BLAKE3_OUT_LEN);
 
 	/* Sample challenge from RNG seeded with hash. */
-	nfl::fastrandombytes_seed(hash, BLAKE3_OUT_LEN);
+	nfl::fastrandombytes_seed(hash);
 	beta = nfl::uniform();
 	nfl::fastrandombytes_reseed();
 }
@@ -262,7 +262,7 @@ static void shuffle_prover(params::poly_q y[MSGS][WIDTH],
 		params::poly_q _t[MSGS], params::poly_q u[MSGS], commit_t d[MSGS],
 		params::poly_q s[MSGS], commit_t c[MSGS], params::poly_q ms[MSGS],
 		params::poly_q _ms[MSGS], vector < params::poly_q > r[MSGS],
-		params::poly_q rho[MSGS], commitkey_t & key) {
+		params::poly_q rho[MSGS], comkey_t & key) {
 	vector < params::poly_q > t0(1);
 	vector < params::poly_q > _r[MSGS];
 	params::poly_q alpha[2], beta, theta[MSGS], inv[MSGS];
@@ -278,14 +278,14 @@ static void shuffle_prover(params::poly_q y[MSGS][WIDTH],
 		}
 		t0[0].invntt_pow_invphi();
 		_r[i].resize(WIDTH);
-		commit_sample(_r[i]);
-		commit_doit(d[i], t0, key, _r[i]);
+		bdlop_sample_rand(_r[i]);
+		bdlop_commit(d[i], t0, key, _r[i]);
 	}
 	t0[0] = theta[MSGS - 2] * ms[MSGS - 1];
 	t0[0].invntt_pow_invphi();
 	_r[MSGS - 1].resize(WIDTH);
-	commit_sample(_r[MSGS - 1]);
-	commit_doit(d[MSGS - 1], t0, key, _r[MSGS - 1]);
+	bdlop_sample_rand(_r[MSGS - 1]);
+	bdlop_commit(d[MSGS - 1], t0, key, _r[MSGS - 1]);
 
 	shuffle_hash(beta, c, d, _ms, rho);
 
@@ -328,7 +328,7 @@ static int shuffle_verifier(params::poly_q y[MSGS][WIDTH],
 		params::poly_q _y[MSGS][WIDTH], params::poly_q t[MSGS],
 		params::poly_q _t[MSGS], params::poly_q u[MSGS], commit_t d[MSGS],
 		params::poly_q s[MSGS], commit_t c[MSGS], params::poly_q _ms[MSGS],
-		params::poly_q rho[SIZE], commitkey_t & key) {
+		params::poly_q rho[SIZE], comkey_t & key) {
 	params::poly_q alpha[2], beta;
 	vector < params::poly_q > t0(1);
 	int result = 1;
@@ -361,14 +361,14 @@ static int shuffle_verifier(params::poly_q y[MSGS][WIDTH],
 }
 
 static int run(commit_t com[MSGS], vector < vector < params::poly_q >> m,
-		vector < vector < params::poly_q >> _m, commitkey_t & key,
+		vector < vector < params::poly_q >> _m, comkey_t & key,
 		vector < params::poly_q > r[MSGS]) {
 	params::poly_q ms[MSGS], _ms[MSGS];
 	commit_t d[MSGS], cs[MSGS];
 	vector < params::poly_q > t0(1);
 	params::poly_q one, t1, rho[SIZE], s[MSGS];
 	params::poly_q y[MSGS][WIDTH], _y[MSGS][WIDTH], t[MSGS], _t[MSGS], u[MSGS];
-	commitkey_t _key;
+	comkey_t _key;
 
 	/* Extend commitments and adjust key. */
 	rho[0] = 1;
@@ -418,21 +418,21 @@ static int run(commit_t com[MSGS], vector < vector < params::poly_q >> m,
 
 #ifdef MAIN
 static void test() {
-	commitkey_t key;
+	comkey_t key;
 	commit_t com[MSGS];
 	vector < vector < params::poly_q >> m(MSGS), _m(MSGS);
 	vector < params::poly_q > r[MSGS];
 
 	/* Generate commitment key-> */
-	commit_keygen(key);
+	bdlop_keygen(key);
 	for (int i = 0; i < MSGS; i++) {
 		m[i].resize(SIZE);
 		for (int j = 0; j < SIZE; j++) {
 			m[i][j] = nfl::ZO_dist();
 		}
 		r[i].resize(WIDTH);
-		commit_sample(r[i]);
-		commit_doit(com[i], m[i], key, r[i]);
+		bdlop_sample_rand(r[i]);
+		bdlop_commit(com[i], m[i], key, r[i]);
 	}
 
 	/* Prover shuffles messages (only a circular shift for simplicity). */
@@ -485,22 +485,22 @@ static void microbench() {
 }
 
 static void bench() {
-	commitkey_t key;
+	comkey_t key;
 	commit_t com[MSGS];
 	vector < vector < params::poly_q >> m(MSGS), _m(MSGS);
 	vector < params::poly_q > r[MSGS];
 	params::poly_q y[WIDTH], _y[WIDTH], t, _t, u, alpha[2], beta;
 
 	/* Generate commitment key-> */
-	commit_keygen(key);
+	bdlop_keygen(key);
 	for (int i = 0; i < MSGS; i++) {
 		m[i].resize(SIZE);
 		for (int j = 0; j < SIZE; j++) {
 			m[i][j] = nfl::ZO_dist();
 		}
 		r[i].resize(WIDTH);
-		commit_sample(r[i]);
-		commit_doit(com[i], m[i], key, r[i]);
+		bdlop_sample_rand(r[i]);
+		bdlop_commit(com[i], m[i], key, r[i]);
 	}
 
 	/* Prover shuffles messages (only a circular shift for simplicity). */

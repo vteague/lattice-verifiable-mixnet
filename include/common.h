@@ -59,7 +59,7 @@ namespace params {
 /*============================================================================*/
 
 /* Class that represents a commitment key pair. */
-class commitkey_t {
+class comkey_t {
     public:
        params::poly_q A1[HEIGHT][WIDTH - HEIGHT];
        params::poly_q A2[SIZE][WIDTH];
@@ -79,7 +79,7 @@ class bgvkey_t {
        params::poly_q b;
 };
 
-class cipher_t {
+class bgvenc_t {
     public:
        params::poly_q u;
        params::poly_q v;
@@ -87,17 +87,17 @@ class cipher_t {
 
 #include "util.hpp"
 
-void commit_sample(vector<params::poly_q>& r);
-void commit_sample_chall(params::poly_q& f);
-bool commit_test_norm(params::poly_q r, uint64_t sigma_sqr);
-void commit_doit(commit_t& com, vector<params::poly_q> m, commitkey_t& key, vector<params::poly_q> r);
-int commit_open(commit_t& com, vector<params::poly_q> m, commitkey_t& key, vector<params::poly_q> r, params::poly_q& f);
-void commit_keygen(commitkey_t& key);
+void bdlop_sample_rand(vector<params::poly_q>& r);
+void bdlop_sample_chal(params::poly_q& f);
+bool bdlop_test_norm(params::poly_q r, uint64_t sigma_sqr);
+void bdlop_commit(commit_t& com, vector<params::poly_q> m, comkey_t& key, vector<params::poly_q> r);
+int  bdlop_open(commit_t& com, vector<params::poly_q> m, comkey_t& key, vector<params::poly_q> r, params::poly_q& f);
+void bdlop_keygen(comkey_t& key);
 
-void encrypt_sample_message(params::poly_p& r);
-void encrypt_sample_short(params::poly_q& r);
-void encrypt_keygen(bgvkey_t& pk, params::poly_q& sk);
-void encrypt_doit(cipher_t &c, bgvkey_t& pk, params::poly_p& m);
-void encrypt_undo(params::poly_p& m, cipher_t& c, params::poly_q & sk);
+void bgv_sample_message(params::poly_p& r);
+void bgv_sample_short(params::poly_q& r);
+void bgv_keygen(bgvkey_t& pk, params::poly_q& sk);
+void bgv_encrypt(bgvenc_t &c, bgvkey_t& pk, params::poly_p& m);
+void bgv_decrypt(params::poly_p& m, bgvenc_t& c, params::poly_q & sk);
 
 #endif

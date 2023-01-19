@@ -338,8 +338,12 @@ void poly<T, Degree, NbModuli>::set(ZO_dist const& mode) {
   for (size_t cm = 0; cm < NbModuli; ++cm) {
     const T pm = params<T>::P[cm] - 1u;
     /* sample {-1, 0, 1} */
-    for (size_t i = 0; i < Degree; ++i)
-      *ptr++ = rnd[i] <= mode.rho ? (pm + (rnd[i] & 2)) % params<T>::P[cm] : 0u;
+    for (size_t i = 0; i < Degree; ++i, ptr++) {
+      *ptr = rnd[i] <= mode.rho ? (pm + (rnd[i] & 2)) : 0u;
+      if (*ptr > params<T>::P[cm]) {
+        *ptr -= params<T>::P[cm];
+      }
+    }
   }
 }
 
@@ -385,8 +389,8 @@ void poly<T, Degree, NbModuli>::set(hwt_dist const& mode) {
     const T pm = params<T>::P[cm] - 1u;
     rnd_ptr = rnd.begin();
     for (size_t pos : hitted) {
-        _data[pos + offset] = pm + ((*rnd_ptr++) & 2U); // {-1, 1}
-        _data[pos + offset] %= params<T>::P[cm];
+        _data[pos + offset] = ((*rnd_ptr++) & 2U); // {-1, 1}
+        _data[pos + offset] = (_data[pos + offset] > 0 ? 1 : pm);
     }
   }
   std::memset(hitted.data(), 0x0, hitted.size() * sizeof(size_t)); // erase from memory

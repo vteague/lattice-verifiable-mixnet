@@ -16,7 +16,7 @@ using namespace std;
  * @param[in] r 			- the polynomial to compute the l2-norm.
  * @return the computed norm.
  */
-bool commit_test_norm(params::poly_q r, uint64_t sigma_sqr) {
+bool bdlop_test_norm(params::poly_q r, uint64_t sigma_sqr) {
 	array < mpz_t, params::poly_q::degree > coeffs;
 	mpz_t norm, qDivBy2, tmp;
 
@@ -37,7 +37,7 @@ bool commit_test_norm(params::poly_q r, uint64_t sigma_sqr) {
 	}
 
 	// Compare to (4 * sigma * sqrt(N))^2 = 16 * sigma^2 * N.
-	uint64_t bound = sigma_sqr * params::poly_q::degree;
+	uint64_t bound = 16 * sigma_sqr * params::poly_q::degree;
 	int result = mpz_cmp_ui(norm, bound) < 0;
 
 	mpz_clears(norm, qDivBy2, tmp, nullptr);
@@ -48,7 +48,7 @@ bool commit_test_norm(params::poly_q r, uint64_t sigma_sqr) {
 	return result;
 }
 
-void commit_sample(vector < params::poly_q > &r) {
+void bdlop_sample_rand(vector < params::poly_q > &r) {
 	for (size_t i = 0; i < r.size(); i++) {
 		r[i] = nfl::ZO_dist();
 		r[i].ntt_pow_phi();
@@ -56,20 +56,18 @@ void commit_sample(vector < params::poly_q > &r) {
 }
 
 // Sample a challenge.
-void commit_sample_chall(params::poly_q & f) {
+void bdlop_sample_chal(params::poly_q & f) {
 	params::poly_q c0, c1;
 
-	c0 = nfl::hwt_dist {
-	NONZERO};
-	c1 = nfl::hwt_dist {
-	NONZERO};
+	c0 = nfl::hwt_dist {NONZERO};
+	c1 = nfl::hwt_dist {NONZERO};
 
 	f = c0 - c1;
 	f.ntt_pow_phi();
 }
 
 // Generate a key pair.
-void commit_keygen(commitkey_t & key) {
+void bdlop_keygen(comkey_t & key) {
 	params::poly_q one = 1;
 	one.ntt_pow_phi();
 	for (size_t i = 0; i < HEIGHT; i++) {
@@ -89,7 +87,7 @@ void commit_keygen(commitkey_t & key) {
 }
 
 // Commit to a message.
-void commit_doit(commit_t & com, vector < params::poly_q > m, commitkey_t & key,
+void bdlop_commit(commit_t & com, vector < params::poly_q > m, comkey_t & key,
 		vector < params::poly_q > r) {
 	params::poly_q _m;
 
@@ -113,7 +111,7 @@ void commit_doit(commit_t & com, vector < params::poly_q > m, commitkey_t & key,
 }
 
 // Open a commitment on a message, randomness, factor.
-int commit_open(commit_t & com, vector < params::poly_q > m, commitkey_t & key,
+int bdlop_open(commit_t & com, vector < params::poly_q > m, comkey_t & key,
 		vector < params::poly_q > r, params::poly_q & f) {
 	params::poly_q c1, _c1, c2[SIZE], _c2[SIZE], _m;
 	int result = true;
@@ -153,7 +151,7 @@ int commit_open(commit_t & com, vector < params::poly_q > m, commitkey_t & key,
 		for (size_t i = 0; i < r.size(); i++) {
 			c1 = r[i];
 			c1.invntt_pow_invphi();
-			if (!commit_test_norm(c1, 16 * SIGMA_C)) {
+			if (!bdlop_test_norm(c1, 16 * SIGMA_C)) {
 				cout << "ERROR: Commit opening failed norm test" << endl;
 				result = false;
 				break;
@@ -165,7 +163,7 @@ int commit_open(commit_t & com, vector < params::poly_q > m, commitkey_t & key,
 }
 
 // Commit to a ciphertext.
-void commit_doit(commit_t & com, cipher_t & c, commitkey_t & key,
+void bdlop_commit(commit_t & com, bgvenc_t & c, comkey_t & key,
 		vector < params::poly_q > r) {
 	params::poly_q _m;
 
@@ -184,25 +182,25 @@ void commit_doit(commit_t & com, cipher_t & c, commitkey_t & key,
 
 #ifdef MAIN
 static void test1() {
-	commitkey_t key;
+	comkey_t key;
 	commit_t com, _com;
 
-	commit_keygen(key);
+	bdlop_keygen(key);
 	vector < params::poly_q > r(WIDTH), s(WIDTH);
 	params::poly_q f;
 	vector < params::poly_q > m = { nfl::uniform() };
 
 	TEST_BEGIN("commitment for single messages can be generated and opened") {
-		commit_sample(r);
-		commit_doit(com, m, key, r);
+		bdlop_sample_rand(r);
+		bdlop_commit(com, m, key, r);
 		f = 1;
 		f.ntt_pow_phi();
-		TEST_ASSERT(commit_open(com, m, key, r, f) == 1, end);
-		commit_sample_chall(f);
+		TEST_ASSERT(bdlop_open(com, m, key, r, f) == 1, end);
+		bdlop_sample_chal(f);
 		for (size_t j = 0; j < r.size(); j++) {
 			s[j] = f * r[j];
 		}
-		TEST_ASSERT(commit_open(com, m, key, s, f) == 1, end);
+		TEST_ASSERT(bdlop_open(com, m, key, s, f) == 1, end);
 	} TEST_END;
 
 	TEST_BEGIN("commitments for single messages are linearly homomorphic") {
@@ -211,11 +209,11 @@ static void test1() {
 		for (size_t j = 0; j < r.size(); j++) {
 			r[j] = 0;
 		}
-		commit_doit(_com, rho, key, r);
+		bdlop_commit(_com, rho, key, r);
 		com.c1 = com.c1 - _com.c1;
 		com.c2[0] = com.c2[0] - _com.c2[0];
 		m[0] = m[0] - rho[0];
-		TEST_ASSERT(commit_open(com, m, key, s, f) == 1, end);
+		TEST_ASSERT(bdlop_open(com, m, key, s, f) == 1, end);
 	} TEST_END;
 
   end:
@@ -223,56 +221,56 @@ static void test1() {
 }
 
 static void test2() {
-	commitkey_t key, _key;
+	comkey_t key, _key;
 	commit_t c, com, _com;
 
-	commit_keygen(key);
+	bdlop_keygen(key);
 	vector < params::poly_q > r(WIDTH), s(WIDTH);
 	params::poly_q t, f, one;
 	vector < params::poly_q > _m = { 0 }, m =
 			{ nfl::uniform(), nfl::uniform() };
 
 	TEST_BEGIN("commitment for multiple messages can be generated and opened") {
-		commit_sample(r);
-		commit_doit(com, m, key, r);
+		bdlop_sample_rand(r);
+		bdlop_commit(com, m, key, r);
 		f = 1;
 		f.ntt_pow_phi();
-		TEST_ASSERT(commit_open(com, m, key, r, f) == 1, end);
-		commit_sample_chall(f);
+		TEST_ASSERT(bdlop_open(com, m, key, r, f) == 1, end);
+		bdlop_sample_chal(f);
 		for (size_t j = 0; j < r.size(); j++) {
 			s[j] = f * r[j];
 		}
-		TEST_ASSERT(commit_open(com, m, key, s, f) == 1, end);
+		TEST_ASSERT(bdlop_open(com, m, key, s, f) == 1, end);
 	} TEST_END;
 
 	TEST_ONCE("commitments do not open for the wrong keys") {
-		commit_sample(r);
-		commit_doit(com, m, key, r);
-		commit_sample_chall(f);
+		bdlop_sample_rand(r);
+		bdlop_commit(com, m, key, r);
+		bdlop_sample_chal(f);
 		for (size_t j = 0; j < r.size(); j++) {
 			s[j] = f * r[j];
 		}
-		commit_keygen(key);
-		TEST_ASSERT(commit_open(com, m, key, s, f) == 0, end);
+		bdlop_keygen(key);
+		TEST_ASSERT(bdlop_open(com, m, key, s, f) == 0, end);
 	} TEST_END;
 
 	TEST_BEGIN("commitments for multiple messages are linearly homomorphic") {
 		/* Test linearity. */
 		vector < params::poly_q > rho = { nfl::uniform(), nfl::uniform() };
-		commit_sample(r);
-		commit_doit(com, m, key, r);
-		commit_sample_chall(f);
+		bdlop_sample_rand(r);
+		bdlop_commit(com, m, key, r);
+		bdlop_sample_chal(f);
 		for (size_t j = 0; j < r.size(); j++) {
 			s[j] = f * r[j];
 			r[j] = 0;
 		}
-		commit_doit(_com, rho, key, r);
+		bdlop_commit(_com, rho, key, r);
 		m[0] = m[0] - rho[0];
 		m[1] = m[1] - rho[1];
 		com.c1 = com.c1 - _com.c1;
 		com.c2[0] = com.c2[0] - _com.c2[0];
 		com.c2[1] = com.c2[1] - _com.c2[1];
-		TEST_ASSERT(commit_open(com, m, key, s, f) == 1, end);
+		TEST_ASSERT(bdlop_open(com, m, key, s, f) == 1, end);
 		// Restore messages and commitments
 		m[0] = m[0] + rho[0];
 		m[1] = m[1] + rho[1];
@@ -306,7 +304,7 @@ static void test2() {
 				_key.A2[0][j] = _key.A2[0][j] + rho[i] * key.A2[i][j];
 			}
 		}
-		TEST_ASSERT(commit_open(c, _m, _key, s, f) == 1, end);
+		TEST_ASSERT(bdlop_open(c, _m, _key, s, f) == 1, end);
 	} TEST_END;
 
   end:
@@ -314,7 +312,7 @@ static void test2() {
 }
 
 static void bench() {
-	commitkey_t key;
+	comkey_t key;
 	commit_t com;
 	params::poly_q f;
 	vector < params::poly_q > r(WIDTH), s(WIDTH);
@@ -323,37 +321,40 @@ static void bench() {
 
 	bgvkey_t pk;
 	params::poly_q sk;
-	cipher_t c;
+	bgvenc_t c;
 
-	commit_keygen(key);
-	commit_sample_chall(f);
+	BENCH_SMALL("bdlp_keygen", bdlop_keygen(key));
 
-	BENCH_BEGIN("commit_sample") {
-		BENCH_ADD(commit_sample(r));
+	BENCH_BEGIN("bdlop_sample_chal") {
+		BENCH_ADD(bdlop_sample_chal(f));
 	} BENCH_END;
 
-	BENCH_BEGIN("commit_doit") {
-		m[0] = nfl::uniform();
-		m[1] = nfl::uniform();
-		BENCH_ADD(commit_doit(com, m, key, r));
+	BENCH_BEGIN("bdlop_sample_rand") {
+		BENCH_ADD(bdlop_sample_rand(r));
 	} BENCH_END;
 
-	BENCH_BEGIN("commit_open") {
+	BENCH_BEGIN("bdlop_commit") {
 		m[0] = nfl::uniform();
 		m[1] = nfl::uniform();
-		commit_doit(com, m, key, r);
+		BENCH_ADD(bdlop_commit(com, m, key, r));
+	} BENCH_END;
+
+	BENCH_BEGIN("bdlop_open") {
+		m[0] = nfl::uniform();
+		m[1] = nfl::uniform();
+		bdlop_commit(com, m, key, r);
 		for (size_t j = 0; j < r.size(); j++) {
 			s[j] = f * r[j];
 		}
-		BENCH_ADD(commit_open(com, m, key, s, f));
+		BENCH_ADD(bdlop_open(com, m, key, s, f));
 	} BENCH_END;
 
-	encrypt_keygen(pk, sk);
-	encrypt_sample_message(_m);
+	bgv_keygen(pk, sk);
+	bgv_sample_message(_m);
 
-	BENCH_BEGIN("commit_doit (cipher)") {
-		encrypt_doit(c, pk, _m);
-		BENCH_ADD(commit_doit(com, c, key, r));
+	BENCH_BEGIN("bdlop_commit (ciphertext)") {
+		bgv_encrypt(c, pk, _m);
+		BENCH_ADD(bdlop_commit(com, c, key, r));
 	} BENCH_END;
 }
 

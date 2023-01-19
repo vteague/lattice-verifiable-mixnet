@@ -3,11 +3,30 @@
 #include "common.h"
 #include <sys/random.h>
 
-namespace params {
-	using gauss_struct = nfl::gaussian < uint16_t, uint64_t, 2 >;
-	using gauss_t = nfl::FastGaussianNoise < uint16_t, uint64_t, 2 >;
-	gauss_t fg_prng_enc(8.0, LEVEL, DEGREE);
-} void encrypt_sample_message(params::poly_p & r) {
+void ghl_sample_message(params::poly_q & m) {
+	// Sample a short polynomial.
+	std::array < mpz_t, DEGREE > coeffs;
+	uint64_t buf;
+
+	size_t bits_in_moduli_product = params::poly_p::bits_in_moduli_product();
+	for (size_t i = 0; i < params::poly_p::degree; i++) {
+		mpz_init2(coeffs[i], bits_in_moduli_product << 2);
+	}
+
+	for (size_t j = 0; j < params::poly_p::degree / 2; j += 32) {
+		getrandom(&buf, sizeof(buf), 0);
+		for (size_t k = 0; k < 64; k += 2) {
+			mpz_set_ui(coeffs[j + k / 2], (buf >> k) % PRIMEP);
+		}
+	}
+	m.mpz2poly(coeffs);
+
+	for (size_t i = 0; i < params::poly_p::degree; i++) {
+		mpz_clear(coeffs[i]);
+	}
+}
+
+void bgv_sample_message(params::poly_p & m) {
 	// Sample a short polynomial.
 	std::array < mpz_t, DEGREE > coeffs;
 	uint64_t buf;
@@ -20,33 +39,49 @@ namespace params {
 	for (size_t j = 0; j < params::poly_p::degree; j += 32) {
 		getrandom(&buf, sizeof(buf), 0);
 		for (size_t k = 0; k < 64; k += 2) {
-			mpz_set_ui(coeffs[j + k / 2], (buf >> k) % 3);
+			mpz_set_ui(coeffs[j + k / 2], (buf >> k) % PRIMEP);
 		}
 	}
-	r.mpz2poly(coeffs);
+	m.mpz2poly(coeffs);
 
 	for (size_t i = 0; i < params::poly_p::degree; i++) {
 		mpz_clear(coeffs[i]);
 	}
 }
 
-void encrypt_sample_short(params::poly_q & r) {
-	r = nfl::ZO_dist();
-	r.ntt_pow_phi();
+void bgv_rdc(params::poly_p & m) {
+	// Sample a short polynomial.
+	std::array < mpz_t, DEGREE > coeffs;
+
+	size_t bits_in_moduli_product = params::poly_p::bits_in_moduli_product();
+	for (size_t i = 0; i < params::poly_p::degree; i++) {
+		mpz_init2(coeffs[i], bits_in_moduli_product << 2);
+	}
+
+	m.poly2mpz(coeffs);
+	for (size_t j = 0; j < params::poly_p::degree; j++) {
+		mpz_mod_ui(coeffs[j], coeffs[j], PRIMEP);
+	}
+	m.mpz2poly(coeffs);
+
+	for (size_t i = 0; i < params::poly_p::degree; i++) {
+		mpz_clear(coeffs[i]);
+	}
 }
 
 // Generate a key pair.
-void encrypt_keygen(bgvkey_t & pk, params::poly_q & sk) {
-	params::poly_q e = { params::gauss_struct(&params::fg_prng_enc) };
+void bgv_keygen(bgvkey_t & pk, params::poly_q & sk) {
+	params::poly_q e = nfl::ZO_dist();
 	pk.a = nfl::uniform();
 
-	encrypt_sample_short(sk);
+	sk = nfl::ZO_dist();
+	sk.ntt_pow_phi();
 	e.ntt_pow_phi();
 
 	pk.b = pk.a * sk + (e + e + e);
 }
 
-void encrypt_keyshare(params::poly_q s[], size_t shares, params::poly_q & sk) {
+void bgv_keyshare(params::poly_q s[], size_t shares, params::poly_q & sk) {
 	params::poly_q t = sk;
 	for (size_t i = 1; i < shares; i++) {
 		s[i] = nfl::uniform();
@@ -56,17 +91,15 @@ void encrypt_keyshare(params::poly_q s[], size_t shares, params::poly_q & sk) {
 	s[0] = t;
 }
 
-void encrypt_doit(cipher_t & c, bgvkey_t & pk, params::poly_p & m) {
+void bgv_encrypt(bgvenc_t & c, bgvkey_t & pk, params::poly_p & m) {
 	std::array < mpz_t, DEGREE > coeffs;
-	params::poly_q e1 {
-	params::gauss_struct(&params::fg_prng_enc)};
-	params::poly_q e2 {
-	params::gauss_struct(&params::fg_prng_enc)};
-	params::poly_q r;
+	params::poly_q e1 = nfl::ZO_dist();
+	params::poly_q e2 = nfl::ZO_dist();
+	params::poly_q r = nfl::ZO_dist();
 
 	e1.ntt_pow_phi();
 	e2.ntt_pow_phi();
-	encrypt_sample_short(r);
+	r.ntt_pow_phi();
 
 	c.u = pk.a * r + (e1 + e1 + e1);
 	c.v = pk.b * r + (e2 + e2 + e2);
@@ -85,7 +118,12 @@ void encrypt_doit(cipher_t & c, bgvkey_t & pk, params::poly_p & m) {
 	}
 }
 
-void encrypt_undo(params::poly_p & m, cipher_t & c, params::poly_q & sk) {
+void bgv_add(bgvenc_t & c, bgvenc_t & d, bgvenc_t & e) {
+	c.u = d.u + e.u;
+	c.v = d.v + e.v;
+}
+
+void bgv_decrypt(params::poly_p & m, bgvenc_t & c, params::poly_q & sk) {
 	std::array < mpz_t, DEGREE > coeffs;
 	params::poly_q t = c.v - sk * c.u;
 	mpz_t qDivBy2;
@@ -102,7 +140,7 @@ void encrypt_undo(params::poly_p & m, cipher_t & c, params::poly_q & sk) {
 	for (size_t i = 0; i < params::poly_q::degree; i++) {
 		util::center(coeffs[i], coeffs[i], params::poly_q::moduli_product(),
 				qDivBy2);
-		mpz_mod_ui(coeffs[i], coeffs[i], 3);
+		mpz_mod_ui(coeffs[i], coeffs[i], PRIMEP);
 	}
 	m.mpz2poly(coeffs);
 
@@ -112,7 +150,7 @@ void encrypt_undo(params::poly_p & m, cipher_t & c, params::poly_q & sk) {
 	}
 }
 
-void encrypt_ddec(params::poly_q & tj, cipher_t & c, params::poly_q & sj) {
+void bgv_distdec(params::poly_q & tj, bgvenc_t & c, params::poly_q & sj) {
 	std::array < mpz_t, DEGREE > coeffs;
 	params::poly_q mj, Ej;
 	mpz_t qDivBy2, bound;
@@ -123,10 +161,7 @@ void encrypt_ddec(params::poly_q & tj, cipher_t & c, params::poly_q & sj) {
 		mpz_init2(coeffs[i], params::poly_q::bits_in_moduli_product() << 2);
 	}
 	mpz_fdiv_q_2exp(qDivBy2, params::poly_q::moduli_product(), 1);
-	mpz_set_str(bound, PRIMEQ, 10);
-	mpz_mul_2exp(bound, bound, BGVSEC);
-	mpz_fdiv_q_ui(bound, bound, PRIMEP);
-	mpz_fdiv_q_ui(bound, bound, PARTIES);
+	mpz_set_str(bound, BDISTD, 10);
 
 	Ej = nfl::uniform();
 	Ej.poly2mpz(coeffs);
@@ -141,7 +176,7 @@ void encrypt_ddec(params::poly_q & tj, cipher_t & c, params::poly_q & sj) {
 	tj = mj + (Ej + Ej + Ej);
 }
 
-void encrypt_comb(params::poly_p & m, cipher_t & c, params::poly_q t[],
+void bgv_comb(params::poly_p & m, bgvenc_t & c, params::poly_q t[],
 		size_t shares) {
 	std::array < mpz_t, DEGREE > coeffs;
 	params::poly_q v;
@@ -163,7 +198,7 @@ void encrypt_comb(params::poly_p & m, cipher_t & c, params::poly_q t[],
 	for (size_t i = 0; i < params::poly_q::degree; i++) {
 		util::center(coeffs[i], coeffs[i], params::poly_q::moduli_product(),
 				qDivBy2);
-		mpz_mod_ui(coeffs[i], coeffs[i], 3);
+		mpz_mod_ui(coeffs[i], coeffs[i], PRIMEP);
 	}
 	m.mpz2poly(coeffs);
 
@@ -176,39 +211,51 @@ void encrypt_comb(params::poly_p & m, cipher_t & c, params::poly_q t[],
 #ifdef MAIN
 static void test() {
 	bgvkey_t pk;
-	params::poly_q sk, s[PARTIES], t[PARTIES], acc;
+	params::poly_q sk, s[PARTIES], t[PARTIES], acc, mq;
 	params::poly_p m, _m;
-	cipher_t c;
+	bgvenc_t c1, c2;
 
-	encrypt_keygen(pk, sk);
-	encrypt_sample_message(m);
+	bgv_keygen(pk, sk);
+	bgv_sample_message(m);
 
 	TEST_BEGIN("BGV encryption is consistent") {
-		encrypt_doit(c, pk, m);
-		encrypt_undo(_m, c, sk);
+		bgv_encrypt(c1, pk, m);
+		bgv_decrypt(_m, c1, sk);
 		TEST_ASSERT(m - _m == 0, end);
-		encrypt_sample_message(m);
-		encrypt_undo(_m, c, sk);
+		bgv_sample_message(m);
+		bgv_decrypt(_m, c1, sk);
 		TEST_ASSERT(m - _m != 0, end);
-		encrypt_doit(c, pk, m);
-		encrypt_keygen(pk, sk);
-		encrypt_undo(_m, c, sk);
+		bgv_encrypt(c1, pk, m);
+		bgv_keygen(pk, sk);
+		bgv_decrypt(_m, c1, sk);
 		TEST_ASSERT(m - _m != 0, end);
 	} TEST_END;
 
+	TEST_BEGIN("BGV encryption is additively homomorphic") {
+		bgv_sample_message(m);
+		bgv_sample_message(_m);
+		bgv_encrypt(c1, pk, m);
+		bgv_encrypt(c2, pk, _m);
+		bgv_add(c1, c1, c2);
+		m = m + _m;
+		bgv_rdc(m);
+		bgv_decrypt(_m, c1, sk);
+		TEST_ASSERT(m - _m == 0, end);
+	} TEST_END;
+
 	TEST_BEGIN("BGV distributed decryption is consistent") {
-		encrypt_keygen(pk, sk);
-		encrypt_doit(c, pk, m);
-		encrypt_keyshare(s, PARTIES, sk);
+		bgv_keygen(pk, sk);
+		bgv_encrypt(c1, pk, m);
+		bgv_keyshare(s, PARTIES, sk);
 		acc = s[0];
 		for (size_t j = 1; j < PARTIES; j++) {
 			acc = acc + s[j];
 		}
 		TEST_ASSERT(sk - acc == 0, end);
 		for (size_t j = 0; j < PARTIES; j++) {
-			encrypt_ddec(t[j], c, s[j]);
+			bgv_distdec(t[j], c1, s[j]);
 		}
-		encrypt_comb(_m, c, t, PARTIES);
+		bgv_comb(_m, c1, t, PARTIES);
 		TEST_ASSERT(m - _m == 0, end);
 	} TEST_END;
 
@@ -220,35 +267,39 @@ static void bench() {
 	bgvkey_t pk;
 	params::poly_q sk, s[PARTIES], t[PARTIES], acc;
 	params::poly_p m, _m;
-	cipher_t c;
+	bgvenc_t c;
 
-	encrypt_keygen(pk, sk);
+	BENCH_SMALL("bgv_keygen", bgv_keygen(pk, sk));
 
-	BENCH_BEGIN("encrypt_sample_message") {
-		BENCH_ADD(encrypt_sample_message(m));
+	BENCH_BEGIN("bgv_sample_message") {
+		BENCH_ADD(bgv_sample_message(m));
 	} BENCH_END;
 
-	BENCH_BEGIN("encrypt_doit") {
-		BENCH_ADD(encrypt_doit(c, pk, m));
+	BENCH_BEGIN("bgv_encrypt") {
+		BENCH_ADD(bgv_encrypt(c, pk, m));
 	} BENCH_END;
 
-	BENCH_BEGIN("encrypt_undo") {
-		encrypt_doit(c, pk, m);
-		BENCH_ADD(encrypt_undo(_m, c, sk));
+	BENCH_BEGIN("bgv_decrypt") {
+		bgv_encrypt(c, pk, m);
+		BENCH_ADD(bgv_decrypt(_m, c, sk));
 	} BENCH_END;
 
-	encrypt_keyshare(t, PARTIES, sk);
-	BENCH_BEGIN("encrypt_ddec") {
-		encrypt_doit(c, pk, m);
-		BENCH_ADD(encrypt_ddec(t[0], c, s[0]));
+	BENCH_BEGIN("bgv_add") {
+		BENCH_ADD(bgv_add(c, c, c));
+	} BENCH_END;
+
+	bgv_keyshare(t, PARTIES, sk);
+	BENCH_BEGIN("bgv_distdec") {
+		bgv_encrypt(c, pk, m);
+		BENCH_ADD(bgv_distdec(t[0], c, s[0]));
 	} BENCH_END;
 
 	for (size_t i = 1; i < PARTIES; i++) {
-		encrypt_ddec(t[i], c, s[i]);
+		bgv_distdec(t[i], c, s[i]);
 	}
 
-	BENCH_BEGIN("encrypt_comb") {
-		BENCH_ADD(encrypt_comb(_m, c, t, PARTIES));
+	BENCH_BEGIN("bgv_comb") {
+		BENCH_ADD(bgv_comb(_m, c, t, PARTIES));
 	} BENCH_END;
 }
 
