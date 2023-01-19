@@ -1,4 +1,4 @@
-#include "sha.h"
+#include "blake3.h"
 #include "test.h"
 #include "bench.h"
 #include "common.h"
@@ -9,29 +9,29 @@
 #define TAU     1000
 #define NTI     130
 
-static void pianex_hash(uint8_t h[SHA256HashSize], params::poly_q A[R][V],
+static void pianex_hash(uint8_t h[BLAKE3_OUT_LEN], params::poly_q A[R][V],
 		params::poly_q t[TAU][V], params::poly_q W[R][NTI]) {
-	SHA256Context sha;
+    blake3_hasher hasher;
 
-	SHA256Reset(&sha);
+	blake3_hasher_init(&hasher);
 	/* Hash public key. */
 	for (size_t i = 0; i < R; i++) {
 		for (int j = 0; j < V; j++) {
-			SHA256Input(&sha, (const uint8_t *)A[i][j].data(), 16 * DEGREE);
+			blake3_hasher_update(&hasher, (const uint8_t *)A[i][j].data(), 16 * DEGREE);
 		}
 	}
 	for (size_t i = 0; i < TAU; i++) {
 		for (int j = 0; j < V; j++) {
-			SHA256Input(&sha, (const uint8_t *)t[i][j].data(), 16 * DEGREE);
+			blake3_hasher_update(&hasher, (const uint8_t *)t[i][j].data(), 16 * DEGREE);
 		}
 	}
 	for (size_t i = 0; i < R; i++) {
 		for (int j = 0; j < NTI; j++) {
-			SHA256Input(&sha, (const uint8_t *)W[i][j].data(), 16 * DEGREE);
+			blake3_hasher_update(&hasher, (const uint8_t *)W[i][j].data(), 16 * DEGREE);
 		}
 	}
 
-	SHA256Result(&sha, h);
+	blake3_hasher_finalize(&hasher, h, BLAKE3_OUT_LEN);
 }
 
 /**
@@ -73,7 +73,7 @@ bool pianex_test_norm(params::poly_q r) {
 }
 
 
-static void pianex_prover(uint8_t h[SHA256HashSize], params::poly_q Z[V][NTI],
+static void pianex_prover(uint8_t h[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 		params::poly_q A[R][V], params::poly_q t[TAU][V],
 		params::poly_q s[TAU][V]) {
 	params::poly_q Y[V][NTI], W[R][NTI], C[TAU][NTI];
@@ -111,7 +111,7 @@ static void pianex_prover(uint8_t h[SHA256HashSize], params::poly_q Z[V][NTI],
 	pianex_hash(h, A, t, W);
 
 	/* Sample challenge from RNG seeded with hash. */
-	nfl::fastrandombytes_seed(h, SHA256HashSize);
+	nfl::fastrandombytes_seed(h, BLAKE3_OUT_LEN);
 
 	/* Verifier samples challenge matrix C. */
 	for (int i = 0; i < TAU; i++) {
@@ -139,14 +139,14 @@ static void pianex_prover(uint8_t h[SHA256HashSize], params::poly_q Z[V][NTI],
 	mpz_clear(qDivBy2);
 }
 
-int pianex_verifier(uint8_t h1[SHA256HashSize], params::poly_q Z[V][NTI],
+int pianex_verifier(uint8_t h1[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 		params::poly_q A[R][V], params::poly_q t[TAU][V]) {
 	params::poly_q W[R][NTI], C[TAU][NTI];
-	uint8_t h2[SHA256HashSize];
+	uint8_t h2[BLAKE3_OUT_LEN];
 	int result;
 
 	/* Sample challenge from RNG seeded with hash. */
-	nfl::fastrandombytes_seed(h1, SHA256HashSize);
+	nfl::fastrandombytes_seed(h1, BLAKE3_OUT_LEN);
 
 	/* Verifier samples challenge matrix C. */
 	for (int i = 0; i < TAU; i++) {
@@ -175,7 +175,7 @@ int pianex_verifier(uint8_t h1[SHA256HashSize], params::poly_q Z[V][NTI],
 
 	pianex_hash(h2, A, t, W);
 
-	result = memcmp(h1, h2, SHA256HashSize) == 0;
+	result = memcmp(h1, h2, BLAKE3_OUT_LEN) == 0;
 	for (int i = 0; i < R; i++) {
 		for (int j = 0; j < V; j++) {
 			Z[i][j].invntt_pow_invphi();
@@ -188,7 +188,7 @@ int pianex_verifier(uint8_t h1[SHA256HashSize], params::poly_q Z[V][NTI],
 
 static void test() {
 	params::poly_q A[R][V], s[TAU][V], t[TAU][V], Z[V][NTI];
-	uint8_t h1[SHA256HashSize];
+	uint8_t h1[BLAKE3_OUT_LEN];
 	std::array < mpz_t, params::poly_q::degree > coeffs;
 	gmp_randstate_t prng;
 	mpz_t q;
@@ -242,7 +242,7 @@ static void test() {
 
 static void bench() {
 	params::poly_q A[R][V], s[TAU][V], t[TAU][V], Z[V][NTI];
-	uint8_t h1[SHA256HashSize];
+	uint8_t h1[BLAKE3_OUT_LEN];
 
 	/* Create instances. */
 	for (int i = 0; i < R; i++) {

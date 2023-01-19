@@ -8,7 +8,7 @@
 #include "test.h"
 #include "bench.h"
 #include "assert.h"
-#include "sha.h"
+#include "blake3.h"
 
 #define ETA         325
 #define R           (HEIGHT+2)
@@ -21,23 +21,23 @@ params::poly_big H0[V], _H[V], H[TAU][3];
 
 static void piaex_hash(fmpz_t x, fmpz_t beta0, fmpz_t beta[TAU][3], fmpz_t q,
 		commit_t & com) {
-	SHA256Context sha;
-	uint8_t h[SHA256HashSize];
+	uint8_t hash[BLAKE3_OUT_LEN];
+    blake3_hasher hasher;
 	flint_rand_t rand;
 	ulong seed[2];
 
 	flint_randinit(rand);
 
-	SHA256Reset(&sha);
-	SHA256Input(&sha, (const uint8_t *)com.c1.data(), 16 * DEGREE);
+	blake3_hasher_init(&hasher);
+	blake3_hasher_update(&hasher, (const uint8_t *)com.c1.data(), 16 * DEGREE);
 	for (size_t i = 0; i < com.c2.size(); i++) {
-		SHA256Input(&sha, (const uint8_t *)com.c2[i].data(), 16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)com.c2[i].data(), 16 * DEGREE);
 	}
 
-	SHA256Result(&sha, h);
+	blake3_hasher_finalize(&hasher, hash, BLAKE3_OUT_LEN);
 
-	memcpy(&seed[0], h, sizeof(ulong));
-	memcpy(&seed[1], h + SHA256HashSize / 2, sizeof(ulong));
+	memcpy(&seed[0], hash, sizeof(ulong));
+	memcpy(&seed[1], hash + BLAKE3_OUT_LEN / 2, sizeof(ulong));
 	flint_randseed(rand, seed[0], seed[1]);
 	fmpz_randm(x, rand, q);
 	fmpz_randm(beta0, rand, q);

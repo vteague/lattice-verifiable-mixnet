@@ -4,6 +4,7 @@
 #include <flint/flint.h>
 #include <flint/fmpz_mod_poly.h>
 
+#include "blake3.h"
 #include "common.h"
 #include "test.h"
 #include "bench.h"
@@ -17,45 +18,45 @@
 
 #define MSGS        25
 
-void lin_hash(params::poly_q & beta, commitkey_t & key, commit_t x,
+static void lin_hash(params::poly_q & beta, commitkey_t & key, commit_t x,
 		commit_t y, params::poly_q alpha[2], params::poly_q & u,
 		params::poly_q t, params::poly_q _t) {
-	SHA256Context sha;
-	params::poly_q tmp;
-	uint8_t hash[SHA256HashSize];
+	uint8_t hash[BLAKE3_OUT_LEN];
+    blake3_hasher hasher;
 
-	SHA256Reset(&sha);
+    blake3_hasher_init(&hasher);
+
 	/* Hash public key. */
 	for (size_t i = 0; i < HEIGHT; i++) {
 		for (int j = 0; j < WIDTH - HEIGHT; j++) {
-			SHA256Input(&sha, (const uint8_t *)key.A1[i][j].data(),
+			blake3_hasher_update(&hasher, (const uint8_t *)key.A1[i][j].data(),
 					16 * DEGREE);
 		}
 	}
 	for (size_t j = 0; j < WIDTH; j++) {
-		SHA256Input(&sha, (const uint8_t *)key.A2[0][j].data(), 16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)key.A2[0][j].data(), 16 * DEGREE);
 	}
 
 	/* Hash alpha, beta from linear relation. */
 	for (size_t i = 0; i < 2; i++) {
-		SHA256Input(&sha, (const uint8_t *)alpha[i].data(), 16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)alpha[i].data(), 16 * DEGREE);
 	}
 
-	SHA256Input(&sha, (const uint8_t *)x.c1.data(), 16 * DEGREE);
-	SHA256Input(&sha, (const uint8_t *)y.c1.data(), 16 * DEGREE);
+	blake3_hasher_update(&hasher, (const uint8_t *)x.c1.data(), 16 * DEGREE);
+	blake3_hasher_update(&hasher, (const uint8_t *)y.c1.data(), 16 * DEGREE);
 	for (size_t i = 0; i < x.c2.size(); i++) {
-		SHA256Input(&sha, (const uint8_t *)x.c2[i].data(), 16 * DEGREE);
-		SHA256Input(&sha, (const uint8_t *)y.c2[i].data(), 16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)x.c2[i].data(), 16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)y.c2[i].data(), 16 * DEGREE);
 	}
 
-	SHA256Input(&sha, (const uint8_t *)u.data(), 16 * DEGREE);
-	SHA256Input(&sha, (const uint8_t *)t.data(), 16 * DEGREE);
-	SHA256Input(&sha, (const uint8_t *)_t.data(), 16 * DEGREE);
+	blake3_hasher_update(&hasher, (const uint8_t *)u.data(), 16 * DEGREE);
+	blake3_hasher_update(&hasher, (const uint8_t *)t.data(), 16 * DEGREE);
+	blake3_hasher_update(&hasher, (const uint8_t *)_t.data(), 16 * DEGREE);
 
-	SHA256Result(&sha, hash);
+	blake3_hasher_finalize(&hasher, hash, BLAKE3_OUT_LEN);
 
 	/* Sample challenge from RNG seeded with hash. */
-	nfl::fastrandombytes_seed(hash, SHA256HashSize);
+	nfl::fastrandombytes_seed(hash, BLAKE3_OUT_LEN);
 	commit_sample_chall(beta);
 	nfl::fastrandombytes_reseed();
 }
@@ -230,28 +231,29 @@ static int lin_verifier(params::poly_q z[WIDTH], params::poly_q _z[WIDTH],
 
 void shuffle_hash(params::poly_q & beta, commit_t c[MSGS], commit_t d[MSGS],
 		params::poly_q _ms[MSGS], params::poly_q rho[SIZE]) {
-	SHA256Context sha;
-	uint8_t hash[SHA256HashSize];
+	uint8_t hash[BLAKE3_OUT_LEN];
+    blake3_hasher hasher;
+    blake3_hasher_init(&hasher);
 
-	SHA256Reset(&sha);
+	blake3_hasher_init(&hasher);
 
 	for (int i = 0; i < MSGS; i++) {
-		SHA256Input(&sha, (const uint8_t *)_ms[i].data(), 16 * DEGREE);
-		SHA256Input(&sha, (const uint8_t *)c[i].c1.data(), 16 * DEGREE);
-		SHA256Input(&sha, (const uint8_t *)d[i].c1.data(), 16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)_ms[i].data(), 16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)c[i].c1.data(), 16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)d[i].c1.data(), 16 * DEGREE);
 		for (size_t j = 0; j < c[j].c2.size(); j++) {
-			SHA256Input(&sha, (const uint8_t *)c[i].c2[j].data(), 16 * DEGREE);
-			SHA256Input(&sha, (const uint8_t *)d[i].c2[j].data(), 16 * DEGREE);
+			blake3_hasher_update(&hasher, (const uint8_t *)c[i].c2[j].data(), 16 * DEGREE);
+			blake3_hasher_update(&hasher, (const uint8_t *)d[i].c2[j].data(), 16 * DEGREE);
 		}
 	}
 
 	for (int i = 0; i < SIZE; i++) {
-		SHA256Input(&sha, (const uint8_t *)rho[i].data(), 16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)rho[i].data(), 16 * DEGREE);
 	}
-	SHA256Result(&sha, hash);
+	blake3_hasher_finalize(&hasher, hash, BLAKE3_OUT_LEN);
 
 	/* Sample challenge from RNG seeded with hash. */
-	nfl::fastrandombytes_seed(hash, SHA256HashSize);
+	nfl::fastrandombytes_seed(hash, BLAKE3_OUT_LEN);
 	beta = nfl::uniform();
 	nfl::fastrandombytes_reseed();
 }
@@ -514,7 +516,9 @@ static void bench() {
 	alpha[1] = nfl::uniform();
 	beta = nfl::uniform();
 
-	BENCH_SMALL("shuffle-proof (N messages)", run(com, m, _m, key, r));
+	BENCH_BEGIN("linear hash") {
+		BENCH_ADD(lin_hash(beta, key, com[0], com[1], alpha, u, t, _t));
+	} BENCH_END;
 
 	BENCH_BEGIN("linear proof") {
 		BENCH_ADD(lin_prover(y, _y, t, _t, u, com[0], com[1], alpha, key, r[0],
@@ -525,6 +529,7 @@ static void bench() {
 		BENCH_ADD(lin_verifier(y, _y, t, _t, u, com[0], com[1], alpha, key));
 	} BENCH_END;
 
+	BENCH_SMALL("shuffle-proof (N messages)", run(com, m, _m, key, r));
 }
 
 int main(int argc, char *argv[]) {
