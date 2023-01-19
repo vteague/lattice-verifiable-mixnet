@@ -12,6 +12,9 @@
 
 using namespace std;
 
+#ifndef COMMON_H
+#define COMMON_H
+
 /* Parameter v in the commitment  scheme (laximum l1-norm of challs). */
 #define NONZERO     36
 /* Security level to attain. */
@@ -96,3 +99,5 @@ void encrypt_sample_short(params::poly_q& r);
 void encrypt_keygen(bgvkey_t& pk, params::poly_q& sk);
 void encrypt_doit(cipher_t &c, bgvkey_t& pk, params::poly_p& m);
 void encrypt_undo(params::poly_p& m, cipher_t& c, params::poly_q & sk);
+
+#endif

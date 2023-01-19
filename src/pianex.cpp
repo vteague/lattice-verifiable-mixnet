@@ -2,7 +2,7 @@
 #include "test.h"
 #include "bench.h"
 #include "common.h"
-#include "gaussian.h"
+#include "sample_z_large.h"
 
 #define R       (HEIGHT+1)
 #define V       (HEIGHT+3)
@@ -90,7 +90,7 @@ static void pianex_prover(uint8_t h[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 	for (int i = 0; i < V; i++) {
 		for (int j = 0; j < NTI; j++) {
 			for (size_t k = 0; k < params::poly_q::degree; k++) {
-				int64_t coeff = discrete_gaussian(0.0);
+				int64_t coeff = sample_z(0.0, SIGMA_ANEX);
 				mpz_set_si(coeffs[k], coeff);
 			}
 			Y[i][j].mpz2poly(coeffs);

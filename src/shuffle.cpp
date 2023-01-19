@@ -9,7 +9,7 @@
 #include "test.h"
 #include "bench.h"
 #include "assert.h"
-#include "gaussian.h"
+#include "sample_z_small.h"
 
 /*============================================================================*/
 /* Private definitions                                                        */
@@ -137,13 +137,13 @@ static void lin_prover(params::poly_q y[WIDTH], params::poly_q _y[WIDTH],
 	/* Prover samples y,y' from Gaussian. */
 	for (int i = 0; i < WIDTH; i++) {
 		for (size_t k = 0; k < params::poly_q::degree; k++) {
-			int64_t coeff = discrete_gaussian(0.0);
+			int64_t coeff = sample_z(0.0, SIGMA_C);
 			mpz_set_si(coeffs[k], coeff);
 		}
 		y[i].mpz2poly(coeffs);
 		y[i].ntt_pow_phi();
 		for (size_t k = 0; k < params::poly_q::degree; k++) {
-			int64_t coeff = discrete_gaussian(0.0);
+			int64_t coeff = sample_z(0.0, SIGMA_C);
 			mpz_set_si(coeffs[k], coeff);
 		}
 		_y[i].mpz2poly(coeffs);
