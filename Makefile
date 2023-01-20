@@ -6,7 +6,7 @@ BENCH = src/bench.c src/cpucycles.c
 TEST = src/test.c
 LIBS = deps/libnfllib_static.a -lgmp -lmpfr -L deps/ -lflint -lquadmath
 
-all: bdlop bgv shuffle piaex pianex
+all: bdlop bgv shuffle pismall pibnd
 
 bdlop: src/bdlop.cpp src/bgv.cpp ${TEST} ${BENCH} ${INCLUDES}
 	${CPP} ${CFLAGS} -c src/bgv.cpp -o bgv.o
@@ -20,13 +20,13 @@ shuffle: src/shuffle.cpp src/bdlop.cpp ${TEST} ${BENCH} ${INCLUDES}
 	${CPP} ${CFLAGS} -c src/bdlop.cpp -o bdlop.o
 	${CPP} ${CFLAGS} -DMAIN src/shuffle.cpp sample_z_small.o bdlop.o ${TEST} ${BENCH} ${BLAKE3} -o shuffle ${LIBS}
 
-piaex: src/bdlop.cpp src/piaex.cpp ${TEST} ${BENCH} ${INCLUDES}
+pismall: src/bdlop.cpp src/pismall.cpp ${TEST} ${BENCH} ${INCLUDES}
 	${CPP} ${CFLAGS} -DSIZE=3 -c src/bdlop.cpp -o bdlop.o
-	${CPP} ${CFLAGS} -DSIZE=3 -DMAIN src/piaex.cpp bdlop.o ${TEST} ${BENCH} ${BLAKE3} -o piaex ${LIBS}
+	${CPP} ${CFLAGS} -DSIZE=3 -DMAIN src/pismall.cpp bdlop.o ${TEST} ${BENCH} ${BLAKE3} -o pismall ${LIBS}
 
-pianex: src/pianex.cpp ${TEST} ${BENCH} ${INCLUDES}
+pibnd: src/pibnd.cpp ${TEST} ${BENCH} ${INCLUDES}
 	${CPP} ${CFLAGS} -c src/sample_z_small.c -o sample_z_small.o
-	${CPP} ${CFLAGS} -DMAIN src/pianex.cpp sample_z_small.o ${TEST} ${BENCH} ${BLAKE3} -o pianex ${LIBS}
+	${CPP} ${CFLAGS} -DMAIN src/pibnd.cpp sample_z_small.o ${TEST} ${BENCH} ${BLAKE3} -o pibnd ${LIBS}
 
 clean:
-	rm *.o bdlop bgv shuffle piaex pianex
+	rm *.o bdlop bgv shuffle pismall pibnd

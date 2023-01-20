@@ -9,7 +9,7 @@
 #define TAU     1000
 #define NTI     130
 
-static void pianex_hash(uint8_t h[BLAKE3_OUT_LEN], params::poly_q A[R][V],
+static void pibnd_hash(uint8_t h[BLAKE3_OUT_LEN], params::poly_q A[R][V],
 		params::poly_q t[TAU][V], params::poly_q W[R][NTI]) {
     blake3_hasher hasher;
 
@@ -40,7 +40,7 @@ static void pianex_hash(uint8_t h[BLAKE3_OUT_LEN], params::poly_q A[R][V],
  * @param[in] r 			- the polynomial to compute the l2-norm.
  * @return the computed norm.
  */
-bool pianex_test_norm(params::poly_q r) {
+bool pibnd_test_norm(params::poly_q r) {
 	array < mpz_t, params::poly_q::degree > coeffs;
 	mpz_t norm, qDivBy2, tmp, q;
 
@@ -73,7 +73,7 @@ bool pianex_test_norm(params::poly_q r) {
 }
 
 
-static void pianex_prover(uint8_t h[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
+static void pibnd_prover(uint8_t h[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 		params::poly_q A[R][V], params::poly_q t[TAU][V],
 		params::poly_q s[TAU][V]) {
 	params::poly_q Y[V][NTI], W[R][NTI], C[TAU][NTI];
@@ -108,7 +108,7 @@ static void pianex_prover(uint8_t h[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 		}
 	}
 
-	pianex_hash(h, A, t, W);
+	pibnd_hash(h, A, t, W);
 
 	/* Sample challenge from RNG seeded with hash. */
 	nfl::fastrandombytes_seed(h);
@@ -139,7 +139,7 @@ static void pianex_prover(uint8_t h[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 	mpz_clear(qDivBy2);
 }
 
-int pianex_verifier(uint8_t h1[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
+int pibnd_verifier(uint8_t h1[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 		params::poly_q A[R][V], params::poly_q t[TAU][V]) {
 	params::poly_q W[R][NTI], C[TAU][NTI];
 	uint8_t h2[BLAKE3_OUT_LEN];
@@ -173,13 +173,13 @@ int pianex_verifier(uint8_t h1[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 		}
 	}
 
-	pianex_hash(h2, A, t, W);
+	pibnd_hash(h2, A, t, W);
 
 	result = memcmp(h1, h2, BLAKE3_OUT_LEN) == 0;
 	for (int i = 0; i < R; i++) {
 		for (int j = 0; j < V; j++) {
 			Z[i][j].invntt_pow_invphi();
-			result &= pianex_test_norm(Z[i][j]);
+			result &= pibnd_test_norm(Z[i][j]);
 		}
 	}
 
@@ -225,9 +225,9 @@ static void test() {
 		}
 	}
 
-	TEST_ONCE("ANEX proof is consistent") {
-		pianex_prover(h1, Z, A, t, s);
-		TEST_ASSERT(pianex_verifier(h1, Z, A, t) == 1, end);
+	TEST_ONCE("BND proof is consistent") {
+		pibnd_prover(h1, Z, A, t, s);
+		TEST_ASSERT(pibnd_verifier(h1, Z, A, t) == 1, end);
 	} TEST_END;
 
   end:
@@ -265,8 +265,8 @@ static void bench() {
 		}
 	}
 
-	BENCH_SMALL("ANEX prover (N relations)", pianex_prover(h1, Z, A, t, s));
-	BENCH_SMALL("ANEX verifier (N relations)", pianex_verifier(h1, Z, A, t));
+	BENCH_SMALL("BND prover (N relations)", pibnd_prover(h1, Z, A, t, s));
+	BENCH_SMALL("BND verifier (N relations)", pibnd_verifier(h1, Z, A, t));
 }
 
 int main(int argc, char *argv[]) {
