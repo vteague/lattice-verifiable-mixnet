@@ -13,7 +13,7 @@
 #define ETA         325
 #define R           (HEIGHT+2)
 #define V           (WIDTH+3)
-#define TAU         10
+#define TAU         1000
 
 /* Had to move those to global to avoid overflowing the stack. */
 params::poly_q A[R][V], s[TAU][V], t[TAU][R];
@@ -643,6 +643,6 @@ int main() {
 
 	printf("\n** Tests for lattice-based AEX proof:\n\n");
 	test(rand);
-
+	printf("\nMultiply prover by 3 due to rejection sampling.\n");
 	flint_randclear(rand);
 }

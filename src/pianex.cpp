@@ -2,7 +2,7 @@
 #include "test.h"
 #include "bench.h"
 #include "common.h"
-#include "sample_z_large.h"
+#include "sample_z_small.h"
 
 #define R       (HEIGHT+1)
 #define V       (HEIGHT+3)

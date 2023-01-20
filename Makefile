@@ -25,8 +25,8 @@ piaex: src/bdlop.cpp src/piaex.cpp ${TEST} ${BENCH} ${INCLUDES}
 	${CPP} ${CFLAGS} -DSIZE=3 -DMAIN src/piaex.cpp bdlop.o ${TEST} ${BENCH} ${BLAKE3} -o piaex ${LIBS}
 
 pianex: src/pianex.cpp ${TEST} ${BENCH} ${INCLUDES}
-	${CPP} ${CFLAGS} -c src/sample_z_large.c -o sample_z_large.o
-	${CPP} ${CFLAGS} -DMAIN src/pianex.cpp sample_z_large.o ${TEST} ${BENCH} ${BLAKE3} -o pianex ${LIBS}
+	${CPP} ${CFLAGS} -c src/sample_z_small.c -o sample_z_small.o
+	${CPP} ${CFLAGS} -DMAIN src/pianex.cpp sample_z_small.o ${TEST} ${BENCH} ${BLAKE3} -o pianex ${LIBS}
 
 clean:
 	rm *.o bdlop bgv shuffle piaex pianex
