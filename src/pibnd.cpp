@@ -270,10 +270,10 @@ static void bench() {
 }
 
 int main(int argc, char *argv[]) {
-	printf("\n** Tests for lattice-based ANEX proof:\n\n");
+	printf("\n** Tests for lattice-based BND proof:\n\n");
 	test();
 
-	printf("\n** Benchmarks for lattice-based ANEX proof:\n\n");
+	printf("\n** Benchmarks for lattice-based BND proof:\n\n");
 	bench();
 	printf("\nMultiply prover by 3 due to rejection sampling.");
 }

@@ -19,7 +19,7 @@
 params::poly_q A[R][V], s[TAU][V], t[TAU][R];
 params::poly_big H0[V], _H[V], H[TAU][3];
 
-static void piaex_hash(fmpz_t x, fmpz_t beta0, fmpz_t beta[TAU][3], fmpz_t q,
+static void pismall_hash(fmpz_t x, fmpz_t beta0, fmpz_t beta[TAU][3], fmpz_t q,
 		commit_t & com) {
 	uint8_t hash[BLAKE3_OUT_LEN];
     blake3_hasher hasher;
@@ -120,7 +120,7 @@ static void poly_from(fmpz_mod_poly_t & out, params::poly_q & in,
 	}
 }
 
-static void piaex_setup(fmpz_mod_poly_t lag[], fmpz_t a[TAU], fmpz_t & q,
+static void pismall_setup(fmpz_mod_poly_t lag[], fmpz_t a[TAU], fmpz_t & q,
 		flint_rand_t prng, const fmpz_mod_ctx_t ctx) {
 	array < mpz_t, params::poly_q::degree > coeffs;
 	fmpz_t t, u;
@@ -166,7 +166,7 @@ static void piaex_setup(fmpz_mod_poly_t lag[], fmpz_t a[TAU], fmpz_t & q,
 	}
 }
 
-static int piaex_prover(commit_t & com, fmpz_t x, fmpz_mod_poly_t f[V],
+static int pismall_prover(commit_t & com, fmpz_t x, fmpz_mod_poly_t f[V],
 		fmpz_t rf[ETA], fmpz_mod_poly_t h[2][V], fmpz_t rh[ETA],
 		vector < params::poly_q > rd, comkey_t & key,
 		fmpz_mod_poly_t lag[TAU + 1], flint_rand_t prng,
@@ -334,7 +334,7 @@ static int piaex_prover(commit_t & com, fmpz_t x, fmpz_mod_poly_t f[V],
 		}
 	}
 
-	piaex_hash(x, beta0, beta, q, com);
+	pismall_hash(x, beta0, beta, q, com);
 
 	/* Compute f = s_0 * l_0(x). */
 	fmpz_mod_poly_evaluate_fmpz(y[0], lag[0], x, ctx_q);
@@ -429,7 +429,7 @@ static int piaex_prover(commit_t & com, fmpz_t x, fmpz_mod_poly_t f[V],
 	return 1;
 }
 
-static int piaex_verifier(commit_t & com, fmpz_mod_poly_t f[V], fmpz_t rf[ETA],
+static int pismall_verifier(commit_t & com, fmpz_mod_poly_t f[V], fmpz_t rf[ETA],
 		vector < params::poly_q > rd, comkey_t & key,
 		fmpz_mod_poly_t lag[TAU + 1], flint_rand_t prng,
 		const fmpz_mod_ctx_t ctx) {
@@ -451,7 +451,7 @@ static int piaex_verifier(commit_t & com, fmpz_mod_poly_t f[V], fmpz_t rf[ETA],
 	}
 
 	fmpz_set_str(q, PRIMEQ, 10);
-	piaex_hash(x, beta0, beta, q, com);
+	pismall_hash(x, beta0, beta, q, com);
 
 	fmpz_set_mpz(q, params::poly_q::moduli_product());
 	fmpz_mod_ctx_init(ctx_q, q);
@@ -597,22 +597,22 @@ static void test(flint_rand_t rand) {
 		}
 	} TEST_END;
 
-	piaex_setup(lag, a, q, rand, ctx);
+	pismall_setup(lag, a, q, rand, ctx);
 
 	bdlop_keygen(key);
 	bdlop_sample_rand(rd);
 
 	TEST_ONCE("AEX proof is consistent") {
-		piaex_prover(com, x, f, rf, h, rh, rd, key, lag, rand, ctx);
-		TEST_ASSERT(piaex_verifier(com, f, rf, rd, key, lag, rand, ctx) == 1,
+		pismall_prover(com, x, f, rf, h, rh, rd, key, lag, rand, ctx);
+		TEST_ASSERT(pismall_verifier(com, f, rf, rd, key, lag, rand, ctx) == 1,
 				end);
 	} TEST_END;
 
 	printf("\n** Benchmarks for lattice-based AEX proof:\n\n");
-	BENCH_SMALL("piaex_setup", piaex_setup(lag, a, q, rand, ctx));
-	BENCH_SMALL("piaex_prover", piaex_prover(com, x, f, rf, h, rh, rd, key, lag,
+	BENCH_SMALL("pismall_setup", pismall_setup(lag, a, q, rand, ctx));
+	BENCH_SMALL("pismall_prover", pismall_prover(com, x, f, rf, h, rh, rd, key, lag,
 					rand, ctx));
-	BENCH_SMALL("piaex_verifier", piaex_verifier(com, f, rf, rd, key, lag, rand,
+	BENCH_SMALL("pismall_verifier", pismall_verifier(com, f, rf, rd, key, lag, rand,
 					ctx));
 
   end:
