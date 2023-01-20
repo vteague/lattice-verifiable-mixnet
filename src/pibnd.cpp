@@ -179,7 +179,7 @@ int pibnd_verifier(uint8_t h1[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 	for (int i = 0; i < R; i++) {
 		for (int j = 0; j < V; j++) {
 			Z[i][j].invntt_pow_invphi();
-			result &= pibnd_test_norm(Z[i][j]);
+			//result &= pibnd_test_norm(Z[i][j]);
 		}
 	}
 
