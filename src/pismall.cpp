@@ -643,6 +643,5 @@ int main() {
 
 	printf("\n** Tests for lattice-based AEX proof:\n\n");
 	test(rand);
-	printf("\nMultiply prover by 3 due to rejection sampling.\n");
 	flint_randclear(rand);
 }
