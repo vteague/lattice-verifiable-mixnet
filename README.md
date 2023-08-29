@@ -13,7 +13,7 @@ To build NFLLib, run the following inside a cloned version of this repository:
 ```
 $ mkdir deps
 $ cd deps
-$ cmake .. -DCMAKE_BUILD_TYPE=Release -DNFL_OPTIMIZED=ON
+$ cmake ../NFLlib -DCMAKE_BUILD_TYPE=Release -DNFL_OPTIMIZED=ON
 $ make
 $ make test
 ```
