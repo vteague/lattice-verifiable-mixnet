@@ -37,16 +37,18 @@ using namespace std;
 #define DEGREE      4096
 /* Sigma for the commitment gaussian distribution. */
 #define SIGMA_C     (1u << 12)
-/* Sigma for the approximate amortized proof. */
-#define SIGMA_ANEX  (1e66l)
+/* Sigma for the boundness proof. */
+#define SIGMA_B1     (11585u)
+/* Sigma for the boundness proof. */
+#define SIGMA_B2     (1e66l)
+/* Norm bound for boundness proof. */
+#define BOUND_B     "6678434726570384949248"
 /* Parties that run the distributed decryption protocol. */
 #define PARTIES     4
 /* Security level for Distributed Decryption. */
 #define BGVSEC      40
 /* Bound for Distributed Decryption = 2^BGVSEC * q/(2 * p * PARTIES). */
-#define BDISTD      "750837175903336127688539820910095018"
-/* Norm bound for PI_ANEX */
-#define BOUND_ANEX   145
+#define BOUND_D     "750837175903336127688539820910095018"
 
 namespace params {
     using poly_p = nfl::poly_from_modulus<uint32_t, DEGREE, 30>;

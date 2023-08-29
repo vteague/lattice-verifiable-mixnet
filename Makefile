@@ -26,7 +26,8 @@ pismall: src/bdlop.cpp src/pismall.cpp ${TEST} ${BENCH} ${INCLUDES}
 
 pibnd: src/pibnd.cpp ${TEST} ${BENCH} ${INCLUDES}
 	${CPP} ${CFLAGS} -c src/sample_z_small.c -o sample_z_small.o
-	${CPP} ${CFLAGS} -DMAIN src/pibnd.cpp sample_z_small.o ${TEST} ${BENCH} ${BLAKE3} -o pibnd ${LIBS}
+	${CPP} ${CFLAGS} -c src/sample_z_large.c -o sample_z_large.o
+	${CPP} ${CFLAGS} -DMAIN src/pibnd.cpp sample_z_small.o sample_z_large.o ${TEST} ${BENCH} ${BLAKE3} -o pibnd ${LIBS}
 
 clean:
 	rm *.o bdlop bgv shuffle pismall pibnd

@@ -3,10 +3,11 @@
 #include "bench.h"
 #include "common.h"
 #include "sample_z_small.h"
+#include "sample_z_large.h"
 
 #define R       (HEIGHT+1)
 #define V       (HEIGHT+3)
-#define TAU     1000
+#define TAU     25
 #define NTI     130
 
 static void pibnd_hash(uint8_t h[BLAKE3_OUT_LEN], params::poly_q A[R][V],
@@ -35,12 +36,44 @@ static void pibnd_hash(uint8_t h[BLAKE3_OUT_LEN], params::poly_q A[R][V],
 }
 
 /**
- * Test if the l2-norm is within bounds (BOUND_ANEX).
+ * Test if the l2-norm is within bounds (4 * sigma * sqrt(N)).
  *
  * @param[in] r 			- the polynomial to compute the l2-norm.
  * @return the computed norm.
  */
-bool pibnd_test_norm(params::poly_q r) {
+bool pibnd_test_norm1(params::poly_q r, uint64_t sigma_sqr) {
+	array < mpz_t, params::poly_q::degree > coeffs;
+	mpz_t norm, qDivBy2, tmp;
+
+	/// Constructors
+	mpz_inits(norm, qDivBy2, tmp, nullptr);
+	for (size_t i = 0; i < params::poly_q::degree; i++) {
+		mpz_init2(coeffs[i], (params::poly_q::bits_in_moduli_product() << 2));
+	}
+
+	r.poly2mpz(coeffs);
+	mpz_fdiv_q_2exp(qDivBy2, params::poly_q::moduli_product(), 1);
+	mpz_set_ui(norm, 0);
+	for (size_t i = 0; i < params::poly_q::degree; i++) {
+		util::center(coeffs[i], coeffs[i],
+				params::poly_q::moduli_product(), qDivBy2);
+		mpz_mul(tmp, coeffs[i], coeffs[i]);
+		mpz_add(norm, norm, tmp);
+	}
+
+	// Compare to (sigma * sqrt(2N))^2 = sigma^2 * 2 * N.
+	uint64_t bound = 2 * sigma_sqr * params::poly_q::degree;
+	int result = mpz_cmp_ui(norm, bound) <= 0;
+
+	mpz_clears(norm, qDivBy2, tmp, nullptr);
+	for (size_t i = 0; i < params::poly_q::degree; i++) {
+		mpz_clear(coeffs[i]);
+	}
+
+	return result;
+}
+
+bool pibnd_test_norm2(params::poly_q r) {
 	array < mpz_t, params::poly_q::degree > coeffs;
 	mpz_t norm, qDivBy2, tmp, q;
 
@@ -56,12 +89,14 @@ bool pibnd_test_norm(params::poly_q r) {
 	mpz_set_str(q, PRIMEQ, 10);
 	for (size_t i = 0; i < params::poly_q::degree; i++) {
 		mpz_mod(coeffs[i], coeffs[i], q);
+		util::center(coeffs[i], coeffs[i],
+				params::poly_q::moduli_product(), qDivBy2);
 		mpz_mul(tmp, coeffs[i], coeffs[i]);
 		mpz_add(norm, norm, tmp);
 	}
 
-	mpz_set_ui(tmp, 1);
-	mpz_mul_2exp(tmp, tmp, BOUND_ANEX);
+	mpz_set_str(tmp, BOUND_B, 10);
+	mpz_mul(tmp, tmp, tmp);
 	int result = mpz_cmp(norm, tmp) <= 0;
 
 	mpz_clears(norm, qDivBy2, tmp, q, nullptr);
@@ -69,9 +104,37 @@ bool pibnd_test_norm(params::poly_q r) {
 		mpz_clear(coeffs[i]);
 	}
 
-	return result;
+	return !result;
 }
 
+// Sample a challenge.
+void pibnd_sample_chall(params::poly_q & f) {
+	f = nfl::ZO_dist();
+	f.ntt_pow_phi();
+}
+
+void pibnd_sample_large(params::poly_q & s) {
+	std::array < mpz_t, DEGREE > coeffs;
+	mpz_t qDivBy2, bound;
+
+	mpz_init(qDivBy2);
+	mpz_init(bound);
+	for (size_t i = 0; i < params::poly_q::degree; i++) {
+		mpz_init2(coeffs[i], params::poly_q::bits_in_moduli_product() << 2);
+	}
+	mpz_fdiv_q_2exp(qDivBy2, params::poly_q::moduli_product(), 1);
+	mpz_set_str(bound, BOUND_D, 10);
+
+	s = nfl::uniform();
+	s.poly2mpz(coeffs);
+	for (size_t i = 0; i < params::poly_q::degree; i++) {
+		util::center(coeffs[i], coeffs[i], params::poly_q::moduli_product(),
+				qDivBy2);
+		mpz_mod(coeffs[i], coeffs[i], bound);
+	}
+	s.mpz2poly(coeffs);
+	s.ntt_pow_phi();
+}
 
 static void pibnd_prover(uint8_t h[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 		params::poly_q A[R][V], params::poly_q t[TAU][V],
@@ -79,6 +142,7 @@ static void pibnd_prover(uint8_t h[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 	params::poly_q Y[V][NTI], W[R][NTI], C[TAU][NTI];
 	std::array < mpz_t, params::poly_q::degree > coeffs;
 	mpz_t qDivBy2;
+	int64_t coeff;
 
 	mpz_init(qDivBy2);
 	for (size_t i = 0; i < params::poly_q::degree; i++) {
@@ -90,7 +154,11 @@ static void pibnd_prover(uint8_t h[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 	for (int i = 0; i < V; i++) {
 		for (int j = 0; j < NTI; j++) {
 			for (size_t k = 0; k < params::poly_q::degree; k++) {
-				int64_t coeff = sample_z(0.0, SIGMA_ANEX);
+				if (i < V - 1) {
+					coeff = sample_z(0.0, SIGMA_B1);
+				} else {
+					coeff = sample_z((__float128) 0.0, (__float128) SIGMA_B2);
+				}
 				mpz_set_si(coeffs[k], coeff);
 			}
 			Y[i][j].mpz2poly(coeffs);
@@ -176,13 +244,16 @@ int pibnd_verifier(uint8_t h1[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 	pibnd_hash(h2, A, t, W);
 
 	result = memcmp(h1, h2, BLAKE3_OUT_LEN) == 0;
-	for (int i = 0; i < R; i++) {
-		for (int j = 0; j < V; j++) {
+	for (int i = 0; i < V; i++) {
+		for (int j = 0; j < NTI; j++) {
 			Z[i][j].invntt_pow_invphi();
-			//result &= pibnd_test_norm(Z[i][j]);
+			if (i < V - 1) {
+				result &= pibnd_test_norm1(Z[i][j], SIGMA_B1 * SIGMA_B1);
+			} else {
+				result &= pibnd_test_norm2(Z[i][j]);
+			}
 		}
 	}
-
 	return result;
 }
 
@@ -214,8 +285,11 @@ static void test() {
 	/* Create a total of TAU relations t_i = A * s_i */
 	for (int i = 0; i < TAU; i++) {
 		for (int j = 0; j < V; j++) {
-			s[i][j] = nfl::ZO_dist();
-			s[i][j].ntt_pow_phi();
+			if (i <= TAU - 1) {
+				pibnd_sample_chall(s[i][j]);
+			} else {
+				pibnd_sample_large(s[i][j]);
+			}
 		}
 		for (int j = 0; j < R; j++) {
 			t[i][j] = 0;
@@ -254,8 +328,11 @@ static void bench() {
 	/* Create a total of TAU relations t_i = A * s_i */
 	for (int i = 0; i < TAU; i++) {
 		for (int j = 0; j < V; j++) {
-			s[i][j] = nfl::ZO_dist();
-			s[i][j].ntt_pow_phi();
+			if (i < TAU - 1) {
+				pibnd_sample_chall(s[i][j]);
+			} else {
+				pibnd_sample_large(s[i][j]);
+			}
 		}
 		for (int j = 0; j < R; j++) {
 			t[i][j] = 0;

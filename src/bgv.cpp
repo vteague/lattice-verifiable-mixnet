@@ -161,7 +161,7 @@ void bgv_distdec(params::poly_q & tj, bgvenc_t & c, params::poly_q & sj) {
 		mpz_init2(coeffs[i], params::poly_q::bits_in_moduli_product() << 2);
 	}
 	mpz_fdiv_q_2exp(qDivBy2, params::poly_q::moduli_product(), 1);
-	mpz_set_str(bound, BDISTD, 10);
+	mpz_set_str(bound, BOUND_D, 10);
 
 	Ej = nfl::uniform();
 	Ej.poly2mpz(coeffs);
