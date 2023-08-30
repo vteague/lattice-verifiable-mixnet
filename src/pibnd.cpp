@@ -7,7 +7,7 @@
 
 #define R       (HEIGHT+1)
 #define V       (HEIGHT+3)
-#define TAU     25
+#define TAU     1000
 #define NTI     130
 
 static void pibnd_hash(uint8_t h[BLAKE3_OUT_LEN], params::poly_q A[R][V],
@@ -352,5 +352,5 @@ int main(int argc, char *argv[]) {
 
 	printf("\n** Benchmarks for lattice-based BND proof:\n\n");
 	bench();
-	printf("\nMultiply prover by 3 due to rejection sampling.");
+	printf("\nMultiply prover by 3 due to rejection sampling.\n");
 }
