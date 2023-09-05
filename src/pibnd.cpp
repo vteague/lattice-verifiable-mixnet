@@ -35,7 +35,7 @@ static void pibnd_hash(uint8_t h[BLAKE3_OUT_LEN], params::poly_q A[R][V],
 	blake3_hasher_finalize(&hasher, h, BLAKE3_OUT_LEN);
 }
 
-int pibnd_rej_sampling(params::poly_q Z[V][NTI], params::poly_q SC[V][NTI],
+static int pibnd_rej_sampling(params::poly_q Z[V][NTI], params::poly_q SC[V][NTI],
 		uint64_t s2) {
 	array<mpz_t, params::poly_q::degree> coeffs0, coeffs1;
 	params::poly_q t;
@@ -86,12 +86,11 @@ int pibnd_rej_sampling(params::poly_q Z[V][NTI], params::poly_q SC[V][NTI],
 	mpf_urandomb(u, state, mpf_get_default_prec());
 
 	result = mpz_get_d(dot) < 0;
-
 	r = -2.0 * mpz_get_d(dot) + mpz_get_d(norm);
 	r = r / (2.0 * s2);
 	r = exp(r) / M;
-
 	result |= mpf_get_d(u) > (1/M);
+
 	mpf_clear(u);
 	mpz_clears(dot, norm, qDivBy2, tmp, nullptr);
 	for (size_t i = 0; i < params::poly_q::degree; i++) {
@@ -244,11 +243,6 @@ static void pibnd_prover(uint8_t h[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 				for (int k = 0; k < TAU; k++) {
 					SC[i][j] = SC[i][j] + s[k][i] * C[k][j];
 				}
-			}
-		}
-
-		for (int i = 0; i < V; i++) {
-			for (int j = 0; j < NTI; j++) {
 				Z[i][j] = Z[i][j] + SC[i][j];
 			}
 		}
@@ -420,5 +414,4 @@ int main(int argc, char *argv[]) {
 
 	printf("\n** Benchmarks for lattice-based BND proof:\n\n");
 	bench();
-	printf("\nMultiply prover by 3 due to rejection sampling.\n");
 }

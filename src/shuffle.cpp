@@ -119,14 +119,77 @@ static void simul_inverse(params::poly_q inv[MSGS], params::poly_q m[MSGS]) {
 	inv[0] = u;
 }
 
+static int rej_sampling(params::poly_q z[WIDTH], params::poly_q v[WIDTH],
+		uint64_t s2) {
+	array<mpz_t, params::poly_q::degree> coeffs0, coeffs1;
+	params::poly_q t;
+	mpz_t dot, norm, qDivBy2, tmp;
+	double r, M = 1.75;
+	int64_t seed;
+	mpf_t u;
+	uint8_t buf[8];
+	gmp_randstate_t state;
+	int result;
+
+	/// Constructors
+	mpf_init(u);
+	gmp_randinit_mt(state);
+	mpz_inits(dot, norm, qDivBy2, tmp, nullptr);
+	for (size_t i = 0; i < params::poly_q::degree; i++) {
+		mpz_init2(coeffs0[i], (params::poly_q::bits_in_moduli_product() << 2));
+		mpz_init2(coeffs1[i], (params::poly_q::bits_in_moduli_product() << 2));
+	}
+
+	mpz_fdiv_q_2exp(qDivBy2, params::poly_q::moduli_product(), 1);
+	mpz_set_ui(norm, 0);
+	mpz_set_ui(dot, 0);
+	for (int i = 0; i < WIDTH; i++) {
+		t = z[i];
+		t.invntt_pow_invphi();
+		t.poly2mpz(coeffs0);
+		t = v[i];
+		t.invntt_pow_invphi();
+		t.poly2mpz(coeffs1);
+		for (size_t i = 0; i < params::poly_q::degree; i++) {
+			util::center(coeffs0[i], coeffs0[i],
+					params::poly_q::moduli_product(), qDivBy2);
+			util::center(coeffs1[i], coeffs1[i],
+					params::poly_q::moduli_product(), qDivBy2);
+			mpz_mul(tmp, coeffs0[i], coeffs1[i]);
+			mpz_add(dot, dot, tmp);
+			mpz_mul(tmp, coeffs1[i], coeffs1[i]);
+			mpz_add(norm, norm, tmp);
+		}
+	}
+
+	getrandom(buf, sizeof(buf), 0);
+	memcpy(&seed, buf, sizeof(buf));
+	gmp_randseed_ui(state, seed);
+	mpf_urandomb(u, state, mpf_get_default_prec());
+
+	result = mpz_get_d(dot) < 0;
+	r = -2.0 * mpz_get_d(dot) + mpz_get_d(norm);
+	r = r / (2.0 * s2);
+	r = exp(r) / M;
+	result |= mpf_get_d(u) > r;
+
+	mpf_clear(u);
+	mpz_clears(dot, norm, qDivBy2, tmp, nullptr);
+	for (size_t i = 0; i < params::poly_q::degree; i++) {
+		mpz_clear(coeffs0[i]);
+		mpz_clear(coeffs1[i]);
+	}
+	return result;
+}
+
 static void lin_prover(params::poly_q y[WIDTH], params::poly_q _y[WIDTH],
-		params::poly_q & t, params::poly_q & _t, params::poly_q & u,
+		params::poly_q& t, params::poly_q& _t, params::poly_q& u,
 		commit_t x, commit_t _x, params::poly_q alpha[2],
-		comkey_t & key, vector < params::poly_q > r,
-		vector < params::poly_q > _r) {
-	params::poly_q beta;
-	std::array < mpz_t, params::poly_q::degree > coeffs;
+		comkey_t & key, vector<params::poly_q> r, vector<params::poly_q> _r) {
+	params::poly_q beta, tmp[WIDTH], _tmp[WIDTH];
+	array<mpz_t, params::poly_q::degree> coeffs;
 	mpz_t qDivBy2;
+	int rej0, rej1;
 
 	mpz_init(qDivBy2);
 	for (size_t i = 0; i < params::poly_q::degree; i++) {
@@ -134,44 +197,50 @@ static void lin_prover(params::poly_q y[WIDTH], params::poly_q _y[WIDTH],
 	}
 	mpz_fdiv_q_2exp(qDivBy2, params::poly_q::moduli_product(), 1);
 
-	/* Prover samples y,y' from Gaussian. */
-	for (int i = 0; i < WIDTH; i++) {
-		for (size_t k = 0; k < params::poly_q::degree; k++) {
-			int64_t coeff = sample_z(0.0, SIGMA_C);
-			mpz_set_si(coeffs[k], coeff);
+	do {
+		/* Prover samples y,y' from Gaussian. */
+		for (int i = 0; i < WIDTH; i++) {
+			for (size_t k = 0; k < params::poly_q::degree; k++) {
+				int64_t coeff = sample_z(0.0, SIGMA_C);
+				mpz_set_si(coeffs[k], coeff);
+			}
+			y[i].mpz2poly(coeffs);
+			y[i].ntt_pow_phi();
+			for (size_t k = 0; k < params::poly_q::degree; k++) {
+				int64_t coeff = sample_z(0.0, SIGMA_C);
+				mpz_set_si(coeffs[k], coeff);
+			}
+			_y[i].mpz2poly(coeffs);
+			_y[i].ntt_pow_phi();
 		}
-		y[i].mpz2poly(coeffs);
-		y[i].ntt_pow_phi();
-		for (size_t k = 0; k < params::poly_q::degree; k++) {
-			int64_t coeff = sample_z(0.0, SIGMA_C);
-			mpz_set_si(coeffs[k], coeff);
+
+		t = y[0];
+		_t = _y[0];
+		for (int i = 0; i < HEIGHT; i++) {
+			for (int j = 0; j < WIDTH - HEIGHT; j++) {
+				t = t + key.A1[i][j] * y[j + HEIGHT];
+				_t = _t + key.A1[i][j] * _y[j + HEIGHT];
+			}
 		}
-		_y[i].mpz2poly(coeffs);
-		_y[i].ntt_pow_phi();
-	}
 
-	t = y[0];
-	_t = _y[0];
-	for (int i = 0; i < HEIGHT; i++) {
-		for (int j = 0; j < WIDTH - HEIGHT; j++) {
-			t = t + key.A1[i][j] * y[j + HEIGHT];
-			_t = _t + key.A1[i][j] * _y[j + HEIGHT];
+		u = 0;
+		for (int i = 0; i < WIDTH; i++) {
+			u = u + alpha[0] * (key.A2[0][i] * y[i]) - (key.A2[0][i] * _y[i]);
 		}
-	}
 
-	u = 0;
-	for (int i = 0; i < WIDTH; i++) {
-		u = u + alpha[0] * (key.A2[0][i] * y[i]) - (key.A2[0][i] * _y[i]);
-	}
+		/* Sample challenge. */
+		lin_hash(beta, key, x, _x, alpha, u, t, _t);
 
-	/* Sample challenge. */
-	lin_hash(beta, key, x, _x, alpha, u, t, _t);
-
-	/* Prover */
-	for (int i = 0; i < WIDTH; i++) {
-		y[i] = y[i] + beta * r[i];
-		_y[i] = _y[i] + beta * _r[i];
-	}
+		/* Prover */
+		for (int i = 0; i < WIDTH; i++) {
+			tmp[i] = beta * r[i];
+			_tmp[i] = beta * _r[i];
+			y[i] = y[i] + tmp[i];
+			_y[i] = _y[i] + _tmp[i];
+		}
+		rej0 = rej_sampling(y, tmp, SIGMA_C * SIGMA_C);
+		rej1 = rej_sampling(_y, _tmp, SIGMA_C * SIGMA_C);
+	} while (rej0 || rej1);
 
 	for (size_t i = 0; i < params::poly_q::degree; i++) {
 		mpz_clear(coeffs[i]);
@@ -540,6 +609,5 @@ int main(int argc, char *argv[]) {
 
 	printf("\n** Benchmarks for lattice-based shuffle proof:\n\n");
 	bench();
-	printf("\nMultiply prover by 3 due to rejection sampling.\n");
 }
 #endif
