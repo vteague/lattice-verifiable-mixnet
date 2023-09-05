@@ -167,11 +167,10 @@ static int rej_sampling(params::poly_q z[WIDTH], params::poly_q v[WIDTH],
 	gmp_randseed_ui(state, seed);
 	mpf_urandomb(u, state, mpf_get_default_prec());
 
-	result = mpz_get_d(dot) < 0;
 	r = -2.0 * mpz_get_d(dot) + mpz_get_d(norm);
 	r = r / (2.0 * s2);
 	r = exp(r) / M;
-	result |= mpf_get_d(u) > r;
+	result = mpf_get_d(u) > r;
 
 	mpf_clear(u);
 	mpz_clears(dot, norm, qDivBy2, tmp, nullptr);
@@ -580,9 +579,11 @@ static void bench() {
 		}
 	}
 
-	alpha[0] = nfl::uniform();
-	alpha[1] = nfl::uniform();
-	beta = nfl::uniform();
+	alpha[0] = nfl::ZO_dist();
+	alpha[1] = nfl::ZO_dist();
+	alpha[0].ntt_pow_phi();
+	alpha[1].ntt_pow_phi();
+	bdlop_sample_chal(beta);
 
 	BENCH_BEGIN("linear hash") {
 		BENCH_ADD(lin_hash(beta, key, com[0], com[1], alpha, u, t, _t));
@@ -603,7 +604,7 @@ static void bench() {
 int main(int argc, char *argv[]) {
 	printf("\n** Tests for lattice-based shuffle proof:\n\n");
 	test();
-
+	
 	printf("\n** Microbenchmarks for polynomial arithmetic:\n\n");
 	microbench();
 
