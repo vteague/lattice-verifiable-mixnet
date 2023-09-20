@@ -12,32 +12,35 @@
 
 static void pibnd_hash(uint8_t h[BLAKE3_OUT_LEN], params::poly_q A[R][V],
 		params::poly_q t[TAU][V], params::poly_q W[R][NTI]) {
-    blake3_hasher hasher;
+	blake3_hasher hasher;
 
 	blake3_hasher_init(&hasher);
 	/* Hash public key. */
 	for (size_t i = 0; i < R; i++) {
 		for (int j = 0; j < V; j++) {
-			blake3_hasher_update(&hasher, (const uint8_t *)A[i][j].data(), 16 * DEGREE);
+			blake3_hasher_update(&hasher, (const uint8_t *)A[i][j].data(),
+					16 * DEGREE);
 		}
 	}
 	for (size_t i = 0; i < TAU; i++) {
 		for (int j = 0; j < V; j++) {
-			blake3_hasher_update(&hasher, (const uint8_t *)t[i][j].data(), 16 * DEGREE);
+			blake3_hasher_update(&hasher, (const uint8_t *)t[i][j].data(),
+					16 * DEGREE);
 		}
 	}
 	for (size_t i = 0; i < R; i++) {
 		for (int j = 0; j < NTI; j++) {
-			blake3_hasher_update(&hasher, (const uint8_t *)W[i][j].data(), 16 * DEGREE);
+			blake3_hasher_update(&hasher, (const uint8_t *)W[i][j].data(),
+					16 * DEGREE);
 		}
 	}
 
 	blake3_hasher_finalize(&hasher, h, BLAKE3_OUT_LEN);
 }
 
-static int pibnd_rej_sampling(params::poly_q Z[V][NTI], params::poly_q SC[V][NTI],
-		uint64_t s2) {
-	array<mpz_t, params::poly_q::degree> coeffs0, coeffs1;
+static int pibnd_rej_sampling(params::poly_q Z[V][NTI],
+		params::poly_q SC[V][NTI], uint64_t s2) {
+	array < mpz_t, params::poly_q::degree > coeffs0, coeffs1;
 	params::poly_q t;
 	mpz_t dot, norm, qDivBy2, tmp;
 	double r, M = 3.0;
@@ -89,7 +92,7 @@ static int pibnd_rej_sampling(params::poly_q Z[V][NTI], params::poly_q SC[V][NTI
 	r = -2.0 * mpz_get_d(dot) + mpz_get_d(norm);
 	r = r / (2.0 * s2);
 	r = exp(r) / M;
-	result |= mpf_get_d(u) > (1/M);
+	result |= mpf_get_d(u) > (1 / M);
 
 	mpf_clear(u);
 	mpz_clears(dot, norm, qDivBy2, tmp, nullptr);
@@ -202,7 +205,8 @@ static void pibnd_prover(uint8_t h[BLAKE3_OUT_LEN], params::poly_q Z[V][NTI],
 					if (i < V - 1) {
 						coeff = sample_z(0.0, SIGMA_B1);
 					} else {
-						coeff = sample_z((__float128) 0.0, (__float128) SIGMA_B2);
+						coeff = sample_z((__float128) 0.0,
+								(__float128) SIGMA_B2);
 					}
 					mpz_set_si(coeffs[k], coeff);
 				}

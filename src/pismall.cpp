@@ -22,7 +22,7 @@ params::poly_big H0[V], _H[V], H[TAU][3];
 static void pismall_hash(fmpz_t x, fmpz_t beta0, fmpz_t beta[TAU][3], fmpz_t q,
 		commit_t & com) {
 	uint8_t hash[BLAKE3_OUT_LEN];
-    blake3_hasher hasher;
+	blake3_hasher hasher;
 	flint_rand_t rand;
 	ulong seed[2];
 
@@ -31,7 +31,8 @@ static void pismall_hash(fmpz_t x, fmpz_t beta0, fmpz_t beta[TAU][3], fmpz_t q,
 	blake3_hasher_init(&hasher);
 	blake3_hasher_update(&hasher, (const uint8_t *)com.c1.data(), 16 * DEGREE);
 	for (size_t i = 0; i < com.c2.size(); i++) {
-		blake3_hasher_update(&hasher, (const uint8_t *)com.c2[i].data(), 16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)com.c2[i].data(),
+				16 * DEGREE);
 	}
 
 	blake3_hasher_finalize(&hasher, hash, BLAKE3_OUT_LEN);
@@ -429,8 +430,8 @@ static int pismall_prover(commit_t & com, fmpz_t x, fmpz_mod_poly_t f[V],
 	return 1;
 }
 
-static int pismall_verifier(commit_t & com, fmpz_mod_poly_t f[V], fmpz_t rf[ETA],
-		vector < params::poly_q > rd, comkey_t & key,
+static int pismall_verifier(commit_t & com, fmpz_mod_poly_t f[V],
+		fmpz_t rf[ETA], vector < params::poly_q > rd, comkey_t & key,
 		fmpz_mod_poly_t lag[TAU + 1], flint_rand_t prng,
 		const fmpz_mod_ctx_t ctx) {
 	array < mpz_t, params::poly_q::degree > coeffs;
@@ -610,10 +611,10 @@ static void test(flint_rand_t rand) {
 
 	printf("\n** Benchmarks for lattice-based AEX proof:\n\n");
 	BENCH_SMALL("pismall_setup", pismall_setup(lag, a, q, rand, ctx));
-	BENCH_SMALL("pismall_prover", pismall_prover(com, x, f, rf, h, rh, rd, key, lag,
+	BENCH_SMALL("pismall_prover", pismall_prover(com, x, f, rf, h, rh, rd, key,
+					lag, rand, ctx));
+	BENCH_SMALL("pismall_verifier", pismall_verifier(com, f, rf, rd, key, lag,
 					rand, ctx));
-	BENCH_SMALL("pismall_verifier", pismall_verifier(com, f, rf, rd, key, lag, rand,
-					ctx));
 
   end:
 	for (int i = 0; i < V; i++) {

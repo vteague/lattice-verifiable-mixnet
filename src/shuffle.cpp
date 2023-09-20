@@ -21,9 +21,9 @@ static void lin_hash(params::poly_q & beta, comkey_t & key, commit_t x,
 		commit_t y, params::poly_q alpha[2], params::poly_q & u,
 		params::poly_q t, params::poly_q _t) {
 	uint8_t hash[BLAKE3_OUT_LEN];
-    blake3_hasher hasher;
+	blake3_hasher hasher;
 
-    blake3_hasher_init(&hasher);
+	blake3_hasher_init(&hasher);
 
 	/* Hash public key. */
 	for (size_t i = 0; i < HEIGHT; i++) {
@@ -33,19 +33,23 @@ static void lin_hash(params::poly_q & beta, comkey_t & key, commit_t x,
 		}
 	}
 	for (size_t j = 0; j < WIDTH; j++) {
-		blake3_hasher_update(&hasher, (const uint8_t *)key.A2[0][j].data(), 16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)key.A2[0][j].data(),
+				16 * DEGREE);
 	}
 
 	/* Hash alpha, beta from linear relation. */
 	for (size_t i = 0; i < 2; i++) {
-		blake3_hasher_update(&hasher, (const uint8_t *)alpha[i].data(), 16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)alpha[i].data(),
+				16 * DEGREE);
 	}
 
 	blake3_hasher_update(&hasher, (const uint8_t *)x.c1.data(), 16 * DEGREE);
 	blake3_hasher_update(&hasher, (const uint8_t *)y.c1.data(), 16 * DEGREE);
 	for (size_t i = 0; i < x.c2.size(); i++) {
-		blake3_hasher_update(&hasher, (const uint8_t *)x.c2[i].data(), 16 * DEGREE);
-		blake3_hasher_update(&hasher, (const uint8_t *)y.c2[i].data(), 16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)x.c2[i].data(),
+				16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)y.c2[i].data(),
+				16 * DEGREE);
 	}
 
 	blake3_hasher_update(&hasher, (const uint8_t *)u.data(), 16 * DEGREE);
@@ -121,7 +125,7 @@ static void simul_inverse(params::poly_q inv[MSGS], params::poly_q m[MSGS]) {
 
 static int rej_sampling(params::poly_q z[WIDTH], params::poly_q v[WIDTH],
 		uint64_t s2) {
-	array<mpz_t, params::poly_q::degree> coeffs0, coeffs1;
+	array < mpz_t, params::poly_q::degree > coeffs0, coeffs1;
 	params::poly_q t;
 	mpz_t dot, norm, qDivBy2, tmp;
 	double r, M = 1.75;
@@ -182,11 +186,12 @@ static int rej_sampling(params::poly_q z[WIDTH], params::poly_q v[WIDTH],
 }
 
 static void lin_prover(params::poly_q y[WIDTH], params::poly_q _y[WIDTH],
-		params::poly_q& t, params::poly_q& _t, params::poly_q& u,
+		params::poly_q & t, params::poly_q & _t, params::poly_q & u,
 		commit_t x, commit_t _x, params::poly_q alpha[2],
-		comkey_t & key, vector<params::poly_q> r, vector<params::poly_q> _r) {
+		comkey_t & key, vector < params::poly_q > r,
+		vector < params::poly_q > _r) {
 	params::poly_q beta, tmp[WIDTH], _tmp[WIDTH];
-	array<mpz_t, params::poly_q::degree> coeffs;
+	array < mpz_t, params::poly_q::degree > coeffs;
 	mpz_t qDivBy2;
 	int rej0, rej1;
 
@@ -299,23 +304,29 @@ static int lin_verifier(params::poly_q z[WIDTH], params::poly_q _z[WIDTH],
 void shuffle_hash(params::poly_q & beta, commit_t c[MSGS], commit_t d[MSGS],
 		params::poly_q _ms[MSGS], params::poly_q rho[SIZE]) {
 	uint8_t hash[BLAKE3_OUT_LEN];
-    blake3_hasher hasher;
-    blake3_hasher_init(&hasher);
+	blake3_hasher hasher;
+	blake3_hasher_init(&hasher);
 
 	blake3_hasher_init(&hasher);
 
 	for (int i = 0; i < MSGS; i++) {
-		blake3_hasher_update(&hasher, (const uint8_t *)_ms[i].data(), 16 * DEGREE);
-		blake3_hasher_update(&hasher, (const uint8_t *)c[i].c1.data(), 16 * DEGREE);
-		blake3_hasher_update(&hasher, (const uint8_t *)d[i].c1.data(), 16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)_ms[i].data(),
+				16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)c[i].c1.data(),
+				16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)d[i].c1.data(),
+				16 * DEGREE);
 		for (size_t j = 0; j < c[j].c2.size(); j++) {
-			blake3_hasher_update(&hasher, (const uint8_t *)c[i].c2[j].data(), 16 * DEGREE);
-			blake3_hasher_update(&hasher, (const uint8_t *)d[i].c2[j].data(), 16 * DEGREE);
+			blake3_hasher_update(&hasher, (const uint8_t *)c[i].c2[j].data(),
+					16 * DEGREE);
+			blake3_hasher_update(&hasher, (const uint8_t *)d[i].c2[j].data(),
+					16 * DEGREE);
 		}
 	}
 
 	for (int i = 0; i < SIZE; i++) {
-		blake3_hasher_update(&hasher, (const uint8_t *)rho[i].data(), 16 * DEGREE);
+		blake3_hasher_update(&hasher, (const uint8_t *)rho[i].data(),
+				16 * DEGREE);
 	}
 	blake3_hasher_finalize(&hasher, hash, BLAKE3_OUT_LEN);
 
@@ -604,7 +615,7 @@ static void bench() {
 int main(int argc, char *argv[]) {
 	printf("\n** Tests for lattice-based shuffle proof:\n\n");
 	test();
-	
+
 	printf("\n** Microbenchmarks for polynomial arithmetic:\n\n");
 	microbench();
 
