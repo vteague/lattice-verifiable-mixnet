@@ -32,7 +32,7 @@ using namespace std;
 /* Large modulus. */
 #define PRIMEQ      "302231454903657293688833"
 /* Small modulus. */
-#define PRIMEP      3
+#define PRIMEP      2
 /* Degree of the irreducible polynomial. */
 #define DEGREE      4096
 /* Sigma for the commitment gaussian distribution. */

@@ -78,7 +78,10 @@ void bgv_keygen(bgvkey_t & pk, params::poly_q & sk) {
 	sk.ntt_pow_phi();
 	e.ntt_pow_phi();
 
-	pk.b = pk.a * sk + (e + e + e);
+	pk.b = pk.a * sk;
+	for (size_t i = 0; i < PRIMEP; i++) {
+		pk.b = pk.b + e;
+	}
 }
 
 void bgv_keyshare(params::poly_q s[], size_t shares, params::poly_q & sk) {
@@ -101,8 +104,12 @@ void bgv_encrypt(bgvenc_t & c, bgvkey_t & pk, params::poly_p & m) {
 	e2.ntt_pow_phi();
 	r.ntt_pow_phi();
 
-	c.u = pk.a * r + (e1 + e1 + e1);
-	c.v = pk.b * r + (e2 + e2 + e2);
+	c.u = pk.a * r;
+	c.v = pk.b * r;
+	for (size_t i = 0; i < PRIMEP; i++) {
+		c.u = c.u + e1;
+		c.v = c.v + e2;
+	}
 
 	for (size_t i = 0; i < params::poly_q::degree; i++) {
 		mpz_init2(coeffs[i], params::poly_q::bits_in_moduli_product() << 2);
@@ -173,7 +180,10 @@ void bgv_distdec(params::poly_q & tj, bgvenc_t & c, params::poly_q & sj) {
 	Ej.mpz2poly(coeffs);
 	Ej.ntt_pow_phi();
 	mj = sj * c.u;
-	tj = mj + (Ej + Ej + Ej);
+	tj = mj;
+	for (size_t i = 0; i < PRIMEP; i++) {
+		tj = tj + Ej;
+	}
 }
 
 void bgv_comb(params::poly_p & m, bgvenc_t & c, params::poly_q t[],
