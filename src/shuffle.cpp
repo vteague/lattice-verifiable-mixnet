@@ -101,8 +101,9 @@ static void poly_inverse(params::poly_q & inv, params::poly_q p) {
 	}
 }
 
-static void simul_inverse(params::poly_q inv[MSGS], params::poly_q m[MSGS]) {
-	params::poly_q u, t[MSGS];
+static void simul_inverse(params::poly_q *inv, params::poly_q *m) {
+    auto t = new params::poly_q[MSGS];
+	params::poly_q u;//, t[MSGS];
 	inv[0] = m[0];
 	t[0] = m[0];
 
@@ -336,15 +337,17 @@ void shuffle_hash(params::poly_q & beta, commit_t c[MSGS], commit_t d[MSGS],
 	nfl::fastrandombytes_reseed();
 }
 
-static void shuffle_prover(params::poly_q y[MSGS][WIDTH],
-		params::poly_q _y[MSGS][WIDTH], params::poly_q t[MSGS],
-		params::poly_q _t[MSGS], params::poly_q u[MSGS], commit_t d[MSGS],
-		params::poly_q s[MSGS], commit_t c[MSGS], params::poly_q ms[MSGS],
-		params::poly_q _ms[MSGS], vector < params::poly_q > r[MSGS],
-		params::poly_q rho[MSGS], comkey_t & key) {
+static void shuffle_prover(params::poly_q **y,
+		params::poly_q **_y, params::poly_q *t,
+		params::poly_q *_t, params::poly_q *u, commit_t *d,
+		params::poly_q *s, commit_t *c, params::poly_q *ms,
+		params::poly_q *_ms, vector < params::poly_q > r[MSGS],
+		params::poly_q *rho, comkey_t & key) {
 	vector < params::poly_q > t0(1);
 	vector < params::poly_q > _r[MSGS];
-	params::poly_q alpha[2], beta, theta[MSGS], inv[MSGS];
+    auto theta = new params::poly_q[MSGS];
+    auto inv = new params::poly_q [MSGS];
+	params::poly_q alpha[2], beta;//, theta[MSGS], inv[MSGS];
 
 	/* Prover samples theta_i and computes commitments D_i. */
 	for (size_t i = 0; i < MSGS - 1; i++) {
@@ -403,11 +406,11 @@ static void shuffle_prover(params::poly_q y[MSGS][WIDTH],
 	}
 }
 
-static int shuffle_verifier(params::poly_q y[MSGS][WIDTH],
-		params::poly_q _y[MSGS][WIDTH], params::poly_q t[MSGS],
-		params::poly_q _t[MSGS], params::poly_q u[MSGS], commit_t d[MSGS],
-		params::poly_q s[MSGS], commit_t c[MSGS], params::poly_q _ms[MSGS],
-		params::poly_q rho[SIZE], comkey_t & key) {
+static int shuffle_verifier(params::poly_q **y,
+		params::poly_q **_y, params::poly_q *t,
+		params::poly_q *_t, params::poly_q *u, commit_t *d,
+		params::poly_q *s, commit_t *c, params::poly_q *_ms,
+		params::poly_q *rho, comkey_t & key) {
 	params::poly_q alpha[2], beta;
 	vector < params::poly_q > t0(1);
 	int result = 1;
@@ -439,14 +442,24 @@ static int shuffle_verifier(params::poly_q y[MSGS][WIDTH],
 	return result;
 }
 
-static int run(commit_t com[MSGS], vector < vector < params::poly_q >> m,
+// Maybe m and _m should be preceded by &
+static int run(commit_t *com, vector < vector < params::poly_q >> m,
 		vector < vector < params::poly_q >> _m, comkey_t & key,
 		vector < params::poly_q > r[MSGS]) {
-	params::poly_q ms[MSGS], _ms[MSGS];
-	commit_t d[MSGS], cs[MSGS];
+    auto ms = new params::poly_q[MSGS], _ms=new params::poly_q[MSGS];
+//	params::poly_q ms[MSGS], _ms[MSGS];
+    auto d = new commit_t [MSGS], cs = new commit_t[MSGS];
+//	commit_t d[MSGS], cs[MSGS];
 	vector < params::poly_q > t0(1);
-	params::poly_q one, t1, rho[SIZE], s[MSGS];
-	params::poly_q y[MSGS][WIDTH], _y[MSGS][WIDTH], t[MSGS], _t[MSGS], u[MSGS];
+	params::poly_q one, t1, rho[SIZE];//, s[MSGS];
+    auto s = new params::poly_q [MSGS];
+    auto y = new params::poly_q *[MSGS],_y = new params::poly_q *[MSGS];
+    for (int i = 0; i < MSGS; ++i) {
+        y[i]=new params::poly_q [WIDTH];
+        _y[i]=new params::poly_q[WIDTH];
+    }
+    auto t = new params::poly_q [MSGS], _t = new params::poly_q [MSGS], u=new params::poly_q [MSGS];
+//	params::poly_q y[MSGS][WIDTH], _y[MSGS][WIDTH], t[MSGS], _t[MSGS], u[MSGS];
 	comkey_t _key;
 
 	/* Extend commitments and adjust key. */
@@ -498,7 +511,8 @@ static int run(commit_t com[MSGS], vector < vector < params::poly_q >> m,
 #ifdef MAIN
 static void test() {
 	comkey_t key;
-	commit_t com[MSGS];
+//	commit_t com[MSGS];
+auto com = new commit_t[MSGS];
 	vector < vector < params::poly_q >> m(MSGS), _m(MSGS);
 	vector < params::poly_q > r[MSGS];
 
