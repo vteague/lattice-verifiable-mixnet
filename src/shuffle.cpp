@@ -122,6 +122,8 @@ static void simul_inverse(params::poly_q *inv, params::poly_q *m) {
 		u = u * t[i];
 	}
 	inv[0] = u;
+
+    delete[](t);
 }
 
 static int rej_sampling(params::poly_q z[WIDTH], params::poly_q v[WIDTH],
@@ -404,6 +406,9 @@ static void shuffle_prover(params::poly_q **y,
 		lin_prover(y[l], _y[l], t[l], _t[l], u[l], c[l], d[l], alpha, key, r[l],
 				_r[l]);
 	}
+
+    delete[](theta);
+    delete[](inv);
 }
 
 static int shuffle_verifier(params::poly_q **y,
@@ -504,15 +509,23 @@ static int run(commit_t *com, vector < vector < params::poly_q >> m,
 	}
 
 	shuffle_prover(y, _y, t, _t, u, d, s, cs, ms, _ms, r, rho, _key);
+    auto result = shuffle_verifier(y, _y, t, _t, u, d, s, cs, _ms, rho, _key);
+    delete[](ms); delete[](_ms); delete[](d); delete[](cs); delete[](s);
+    for (int i = 0; i < MSGS; ++i) {
+        delete[](y[i]);
+        delete[](_y[i]);
+    }
+    delete[](y); delete[](_y);
+    delete[](t); delete[](_t); delete[](u);
 
-	return shuffle_verifier(y, _y, t, _t, u, d, s, cs, _ms, rho, _key);
+	return result;
 }
 
 #ifdef MAIN
 static void test() {
 	comkey_t key;
-//	commit_t com[MSGS];
-auto com = new commit_t[MSGS];
+    //	commit_t com[MSGS];
+    auto com = new commit_t[MSGS];
 	vector < vector < params::poly_q >> m(MSGS), _m(MSGS);
 	vector < params::poly_q > r[MSGS];
 
@@ -553,6 +566,7 @@ auto com = new commit_t[MSGS];
 		TEST_ASSERT(run(com, m, _m, key, r) == 1, end);
 	} TEST_END;
 
+  delete[](com);
   end:
 	return;
 }
