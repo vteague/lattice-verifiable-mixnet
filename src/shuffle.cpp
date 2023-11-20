@@ -15,7 +15,7 @@
 /* Private definitions                                                        */
 /*============================================================================*/
 
-#define MSGS        1000
+ #define MSGS        1000
 
 static void lin_hash(params::poly_q & beta, comkey_t & key, commit_t x,
 		commit_t y, params::poly_q alpha[2], params::poly_q & u,
@@ -578,16 +578,16 @@ static void microbench() {
 	alpha[1].ntt_pow_phi();
 
 	BENCH_BEGIN("Polynomial addition") {
-		BENCH_ADD(alpha[0] = alpha[0] + alpha[1]);
+	 	BENCH_ADD(alpha[0] = alpha[0] + alpha[1]);
 	} BENCH_END;
 
 	BENCH_BEGIN("Polynomial multiplication") {
-		BENCH_ADD(alpha[0] = alpha[0] * alpha[1]);
+	    BENCH_ADD(alpha[0] = alpha[0] * alpha[1]);
 	} BENCH_END;
 
 	alpha[0].invntt_pow_invphi();
 	BENCH_BEGIN("Polynomial inverse") {
-		BENCH_ADD(poly_inverse(alpha[1], alpha[0]));
+	 	BENCH_ADD(poly_inverse(alpha[1], alpha[0]));
 	} BENCH_END;
 }
 
@@ -597,7 +597,10 @@ static void bench() {
     auto com = new commit_t[MSGS];
 	vector < vector < params::poly_q >> m(MSGS), _m(MSGS);
 	vector < params::poly_q > r[MSGS];
-	params::poly_q y[WIDTH], _y[WIDTH], t, _t, u, alpha[2], beta;
+	params::poly_q t, _t, u, alpha[2], beta;
+    // params::poly_q y[WIDTH], _y[WIDTH], t, _t, u, alpha[2], beta;
+    auto y = new params::poly_q[WIDTH];
+    auto _y = new params::poly_q[WIDTH];
 
 	/* Generate commitment key-> */
 	bdlop_keygen(key);
@@ -641,6 +644,8 @@ static void bench() {
 	BENCH_SMALL("shuffle-proof (N messages)", run(com, m, _m, key, r));
 
     delete[](com);
+    delete[](y);
+    delete[](_y);
 }
 
 int main(int argc, char *argv[]) {
