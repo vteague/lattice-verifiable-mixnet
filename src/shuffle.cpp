@@ -593,7 +593,8 @@ static void microbench() {
 
 static void bench() {
 	comkey_t key;
-	commit_t com[MSGS];
+	// commit_t com[MSGS];
+    auto com = new commit_t[MSGS];
 	vector < vector < params::poly_q >> m(MSGS), _m(MSGS);
 	vector < params::poly_q > r[MSGS];
 	params::poly_q y[WIDTH], _y[WIDTH], t, _t, u, alpha[2], beta;
@@ -638,6 +639,8 @@ static void bench() {
 	} BENCH_END;
 
 	BENCH_SMALL("shuffle-proof (N messages)", run(com, m, _m, key, r));
+
+    delete[](com);
 }
 
 int main(int argc, char *argv[]) {
