@@ -17,9 +17,9 @@
 
  #define MSGS        1000
 
-static void lin_hash(params::poly_q & beta, comkey_t & key, commit_t x,
-		commit_t y, params::poly_q alpha[2], params::poly_q & u,
-		params::poly_q t, params::poly_q _t) {
+static void lin_hash(params::poly_q & beta, const comkey_t & key, const commit_t & x,
+		const commit_t & y, params::poly_q alpha[2], const params::poly_q & u,
+		const params::poly_q & t, const params::poly_q & _t) {
 	uint8_t hash[BLAKE3_OUT_LEN];
 	blake3_hasher hasher;
 
@@ -28,33 +28,33 @@ static void lin_hash(params::poly_q & beta, comkey_t & key, commit_t x,
 	/* Hash public key. */
 	for (size_t i = 0; i < HEIGHT; i++) {
 		for (int j = 0; j < WIDTH - HEIGHT; j++) {
-			blake3_hasher_update(&hasher, (const uint8_t *)key.A1[i][j].data(),
+			blake3_hasher_update(&hasher, (const uint8_t *)key.A1[i][j].const_data(),
 					16 * DEGREE);
 		}
 	}
 	for (size_t j = 0; j < WIDTH; j++) {
-		blake3_hasher_update(&hasher, (const uint8_t *)key.A2[0][j].data(),
+		blake3_hasher_update(&hasher, (const uint8_t *)key.A2[0][j].const_data(),
 				16 * DEGREE);
 	}
 
 	/* Hash alpha, beta from linear relation. */
 	for (size_t i = 0; i < 2; i++) {
-		blake3_hasher_update(&hasher, (const uint8_t *)alpha[i].data(),
+		blake3_hasher_update(&hasher, (const uint8_t *)alpha[i].const_data(),
 				16 * DEGREE);
 	}
 
-	blake3_hasher_update(&hasher, (const uint8_t *)x.c1.data(), 16 * DEGREE);
-	blake3_hasher_update(&hasher, (const uint8_t *)y.c1.data(), 16 * DEGREE);
+	blake3_hasher_update(&hasher, (const uint8_t *)x.c1.const_data(), 16 * DEGREE);
+	blake3_hasher_update(&hasher, (const uint8_t *)y.c1.const_data(), 16 * DEGREE);
 	for (size_t i = 0; i < x.c2.size(); i++) {
-		blake3_hasher_update(&hasher, (const uint8_t *)x.c2[i].data(),
+		blake3_hasher_update(&hasher, (const uint8_t *)x.c2[i].const_data(),
 				16 * DEGREE);
-		blake3_hasher_update(&hasher, (const uint8_t *)y.c2[i].data(),
+		blake3_hasher_update(&hasher, (const uint8_t *)y.c2[i].const_data(),
 				16 * DEGREE);
 	}
 
-	blake3_hasher_update(&hasher, (const uint8_t *)u.data(), 16 * DEGREE);
-	blake3_hasher_update(&hasher, (const uint8_t *)t.data(), 16 * DEGREE);
-	blake3_hasher_update(&hasher, (const uint8_t *)_t.data(), 16 * DEGREE);
+	blake3_hasher_update(&hasher, (const uint8_t *)u.const_data(), 16 * DEGREE);
+	blake3_hasher_update(&hasher, (const uint8_t *)t.const_data(), 16 * DEGREE);
+	blake3_hasher_update(&hasher, (const uint8_t *)_t.const_data(), 16 * DEGREE);
 
 	blake3_hasher_finalize(&hasher, hash, BLAKE3_OUT_LEN);
 
@@ -256,8 +256,8 @@ static void lin_prover(params::poly_q y[WIDTH], params::poly_q _y[WIDTH],
 }
 
 static int lin_verifier(params::poly_q z[WIDTH], params::poly_q _z[WIDTH],
-		params::poly_q t, params::poly_q _t, params::poly_q u,
-		commit_t x, commit_t _x, params::poly_q alpha[2], comkey_t & key) {
+		params::poly_q t, const params::poly_q & _t, const params::poly_q & u,
+		const commit_t & x, const commit_t & _x, params::poly_q alpha[2], comkey_t & key) {
 	params::poly_q beta, v, _v, tmp, zero = 0;
 	int result = 1;
 
